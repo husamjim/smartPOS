@@ -56,13 +56,18 @@ export const Dashboard: React.FC = () => {
     const itemsWithWarnings: any[] = [];
     
     for (const p of products) {
+      const prodName = isRtl ? p.name_ar : p.name_en;
       // For pharmacy items check batches
       if (p.is_pharmaceutical) {
         const productBatches = await db.batches.where('product_id').equals(p.id).toArray();
         const totalQty = productBatches.reduce((s, b) => s + b.quantity, 0);
         if (totalQty <= p.min_stock) {
           lowStockCount++;
-          itemsWithWarnings.push({ id: p.id, name: p.name_ar, reason: `المخزون منخفض: ${totalQty} ${p.unit}` });
+          itemsWithWarnings.push({ 
+            id: p.id, 
+            name: prodName, 
+            reason: isRtl ? `المخزون منخفض: ${totalQty} ${p.unit}` : `Low stock: ${totalQty} ${p.unit}` 
+          });
         }
 
         // Expiry check
@@ -72,8 +77,10 @@ export const Dashboard: React.FC = () => {
         if (nearExpiryBatches.length > 0) {
           itemsWithWarnings.push({ 
             id: p.id + '_exp', 
-            name: p.name_ar, 
-            reason: `باتش ${nearExpiryBatches[0].batch_number} ينتهي في ${nearExpiryBatches[0].expiry_date}` 
+            name: prodName, 
+            reason: isRtl 
+              ? `باتش ${nearExpiryBatches[0].batch_number} ينتهي في ${nearExpiryBatches[0].expiry_date}` 
+              : `Batch ${nearExpiryBatches[0].batch_number} expires on ${nearExpiryBatches[0].expiry_date}` 
           });
         }
       } else {
@@ -81,7 +88,11 @@ export const Dashboard: React.FC = () => {
         const qty = p.stock !== undefined ? p.stock : 8; // fallback mock stock
         if (qty <= p.min_stock) {
           lowStockCount++;
-          itemsWithWarnings.push({ id: p.id, name: p.name_ar, reason: `المخزون منخفض: ${qty} ${p.unit}` });
+          itemsWithWarnings.push({ 
+            id: p.id, 
+            name: prodName, 
+            reason: isRtl ? `المخزون منخفض: ${qty} ${p.unit}` : `Low stock: ${qty} ${p.unit}` 
+          });
         }
       }
     }
@@ -150,11 +161,18 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold font-sans">
-            {isRtl ? 'لوحة التحكم والمؤشرات' : 'Performance Dashboard'}
-          </h2>
-          <p className="text-xs text-slate-500">مرحباً بك مجدداً. إليك نظرة سريعة على أداء الفروع اليوم.</p>
+        <div className="flex items-center gap-3">
+          <img src="/logo.jpg" alt="Logo" className="h-12 w-12 rounded-xl object-cover border border-slate-200/20 shadow-md" />
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold font-sans">
+              {isRtl ? 'لوحة التحكم والمؤشرات' : 'Performance Dashboard'}
+            </h2>
+            <p className="text-xs text-slate-500">
+              {isRtl 
+                ? 'مرحباً بك مجدداً. إليك نظرة سريعة على أداء الفروع اليوم.' 
+                : 'Welcome back. Here is a quick look at branch performance today.'}
+            </p>
+          </div>
         </div>
         <button
           onClick={fetchStats}

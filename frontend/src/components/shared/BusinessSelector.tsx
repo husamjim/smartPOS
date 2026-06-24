@@ -129,7 +129,7 @@ export const BusinessSelector: React.FC = () => {
         
         {/* Top brand header */}
         <div className="text-center space-y-3">
-          <img src="/logo.jpg" alt="smart POS Logo" className="h-16 mx-auto object-contain rounded-xl shadow-lg border border-slate-800" />
+          <img src="/logo.jpg" alt="smart POS Logo" className="h-28 mx-auto object-contain rounded-2xl shadow-xl border border-slate-700 bg-slate-900" />
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold animate-pulse">
             <Sparkles className="h-3.5 w-3.5" />
             {isRtl ? 'إعداد وتهيئة نظام smart POS الذكي' : 'Setup smart POS Intelligent System'}

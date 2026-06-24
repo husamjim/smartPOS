@@ -123,7 +123,7 @@ export default function App() {
       <div className={`min-h-screen flex items-center justify-center p-6 ${theme === 'dark' ? 'dark bg-[#090d16]' : 'bg-slate-50'}`}>
         <div className="glass-card p-8 rounded-2xl max-w-sm w-full space-y-5 border border-slate-200/50 dark:border-slate-800/50 text-right">
           <div className="text-center space-y-2">
-            <img src="/logo.jpg" alt="smart POS" className="h-16 mx-auto object-contain mb-3 rounded-lg" />
+            <img src="/logo.jpg" alt="smart POS" className="h-28 mx-auto object-contain mb-4 rounded-xl shadow-md border border-slate-700 bg-slate-900" />
             <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent font-sans">
               {isRtl ? 'تسجيل الدخول للنظام' : 'System Login'}
             </h2>
@@ -224,7 +224,7 @@ export default function App() {
           <div className="px-4 flex items-center justify-between">
             {!sidebarCollapsed && (
               <span className="font-extrabold text-base tracking-wide bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2 font-sans">
-                <img src="/logo.jpg" alt="smart POS" className="h-6 w-6 rounded-md object-cover" />
+                <img src="/logo.jpg" alt="smart POS" className="h-8 w-8 rounded-lg object-cover border border-slate-700 bg-slate-900" />
                 <span>{isRtl ? 'سمارت POS' : 'smart POS'}</span>
               </span>
             )}
