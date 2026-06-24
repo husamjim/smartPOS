@@ -1,0 +1,56 @@
+{
+  "name": "smart-pos",
+  "version": "1.0.0",
+  "description": "smart POS & ERP – Full-stack offline point-of-sale system for retail, restaurant, pharmacy, and wholesale.",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:all": "npm run build:frontend && electron-builder --win",
+    "pack": "electron-builder --dir",
+    "dev-frontend": "npm run dev --prefix frontend",
+    "dev-backend": "node backend/server.js"
+  },
+  "build": {
+    "appId": "com.smartpos.app",
+    "productName": "smart POS",
+    "copyright": "Copyright © 2026 smart POS",
+    "directories": {
+      "buildResources": "electron/assets",
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "electron/assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "electron/assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "electron/assets/icon.png",
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "electron/assets/icon.ico",
+      "installerHeaderIcon": "electron/assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}
