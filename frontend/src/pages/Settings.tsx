@@ -423,8 +423,17 @@ export const Settings: React.FC = () => {
             <div className="flex justify-between items-center">
               <span>{isRtl ? 'لغة النظام الحالية' : 'System Language'}</span>
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                <button onClick={() => changeLanguage('ar')} className={`px-3 py-1 rounded-lg ${language === 'ar' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}>العربية</button>
-                <button onClick={() => changeLanguage('en')} className={`px-3 py-1 rounded-lg ${language === 'en' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}>English</button>
+                <select 
+                  value={language} 
+                  onChange={(e) => changeLanguage(e.target.value)}
+                  className="bg-transparent border-none text-xs focus:outline-none cursor-pointer px-2 py-1 text-slate-800 dark:text-slate-200"
+                >
+                  <option value="ar" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">العربية</option>
+                  <option value="en" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">English</option>
+                  <option value="fr" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Français</option>
+                  <option value="de" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Deutsch</option>
+                  <option value="zh" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">中文</option>
+                </select>
               </div>
             </div>
             <div className="flex justify-between items-center">

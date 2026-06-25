@@ -16,7 +16,7 @@ export interface Warehouse {
   branch_id: string;
 }
 
-export type BusinessType = 'restaurant' | 'pharmacy' | 'retail' | 'wholesale';
+export type BusinessType = 'restaurant' | 'pharmacy' | 'retail' | 'wholesale' | 'warehouse';
 
 export interface AppUser {
   id: string;

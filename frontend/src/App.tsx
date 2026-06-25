@@ -10,6 +10,7 @@ import { Kitchen } from './pages/Kitchen';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { AIAssistant } from './pages/AIAssistant';
+import { LandingPage } from './pages/LandingPage';
 import { BusinessSelector } from './components/shared/BusinessSelector';
 import { HardwareService } from './services/hardware';
 
@@ -51,6 +52,7 @@ export default function App() {
     currentUser,
     loginUser,
     logoutUser,
+    addUser,
   } = useApp();
 
   const { receiptPreview, setReceiptPreview } = useCart();
@@ -60,10 +62,26 @@ export default function App() {
   const [showHardwareSim, setShowHardwareSim] = useState(false);
   const [scanInput, setScanInput] = useState('');
 
+  // Landing view state
+  const [landingView, setLandingView] = useState<'landing' | 'login' | 'signup' | 'otp'>('landing');
+
   // Login form local states
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // Signup form local states
+  const [signupName, setSignupName] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupError, setSignupError] = useState('');
+
+  // OTP form local states
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpSuccess, setOtpSuccess] = useState(false);
+  const [otpError, setOtpError] = useState('');
 
   // Derive RTL flag - always computed regardless of render path
   const isRtl = language === 'ar';
@@ -118,74 +136,325 @@ export default function App() {
     setScanInput('');
   };
 
+  const handleSignupSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signupName.trim() || !signupEmail.trim() || !signupPassword || !signupConfirmPassword) {
+      setSignupError(isRtl ? 'الرجاء ملء جميع الحقول!' : 'Please fill all fields!');
+      return;
+    }
+    if (signupPassword.length < 6) {
+      setSignupError(isRtl ? 'يجب أن تكون كلمة المرور 6 خانات على الأقل!' : 'Password must be at least 6 characters!');
+      return;
+    }
+    if (signupPassword !== signupConfirmPassword) {
+      setSignupError(isRtl ? 'كلمات المرور غير متطابقة!' : 'Passwords do not match!');
+      return;
+    }
+    setSignupError('');
+    setOtpLoading(true);
+    setTimeout(() => {
+      setOtpLoading(false);
+      setLandingView('otp');
+    }, 1000);
+  };
+
+  const handleOtpVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode.length !== 4 || isNaN(Number(otpCode))) {
+      setOtpError(isRtl ? 'يجب إدخال كود التحقق المكون من 4 أرقام!' : 'Verification code must be 4 digits!');
+      return;
+    }
+    setOtpError('');
+    setOtpLoading(true);
+    setTimeout(() => {
+      setOtpLoading(false);
+      setOtpSuccess(true);
+      // Register user in AppContext
+      addUser({
+        username: signupEmail,
+        displayName: signupName,
+        role: 'owner',
+        password: signupPassword,
+        active: true
+      });
+      setTimeout(() => {
+        setOtpSuccess(false);
+        setLoginUsername(signupEmail);
+        setLoginPassword(signupPassword);
+        setLandingView('login');
+      }, 1500);
+    }, 1200);
+  };
+
   if (currentUser === null) {
+    if (landingView === 'landing') {
+      return (
+        <LandingPage 
+          language={language} 
+          changeLanguage={changeLanguage} 
+          onNavigate={(view) => setLandingView(view)} 
+        />
+      );
+    }
+
     return (
       <div className={`min-h-screen flex items-center justify-center p-6 ${theme === 'dark' ? 'dark bg-[#090d16]' : 'bg-slate-50'}`}>
         <div className="glass-card p-8 rounded-2xl max-w-sm w-full space-y-5 border border-slate-200/50 dark:border-slate-800/50 text-right">
-          <div className="text-center space-y-2">
-            <img src="/logo.png" alt="smart POS" className="h-36 mx-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
-            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
-              {isRtl ? 'تسجيل الدخول للنظام' : 'System Login'}
-            </h2>
-            <p className="text-xs text-slate-400">
-              {isRtl ? 'الرجاء إدخال بيانات المستخدم المعتمدة للبيع' : 'Enter authorized credentials to proceed'}
-            </p>
+          
+          {/* Card Top Actions */}
+          <div className="flex justify-between items-center border-b border-slate-250/20 dark:border-slate-800/40 pb-3" dir={isRtl ? 'rtl' : 'ltr'}>
+            <button 
+              onClick={() => setLandingView('landing')} 
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] font-bold flex items-center gap-1 transition-all"
+            >
+              {isRtl ? '← الرئيسية' : '← Home'}
+            </button>
+            <select 
+              value={language} 
+              onChange={(e) => changeLanguage(e.target.value)}
+              className="bg-transparent border border-slate-200 dark:border-slate-850 rounded-lg text-[10px] focus:outline-none cursor-pointer px-2 py-1 text-slate-600 dark:text-slate-300"
+            >
+              <option value="ar" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">العربية</option>
+              <option value="en" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">English</option>
+              <option value="fr" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">Français</option>
+              <option value="de" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">Deutsch</option>
+              <option value="zh" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">中文</option>
+            </select>
           </div>
 
-          {loginError && (
-            <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
-              ⚠️ {loginError}
-            </div>
+          {landingView === 'login' && (
+            <>
+              <div className="text-center space-y-2">
+                <img src="/logo.png" alt="smart POS" className="h-28 mx-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
+                  {isRtl ? 'تسجيل الدخول للنظام' : 'System Login'}
+                </h2>
+                <p className="text-xs text-slate-400">
+                  {isRtl ? 'الرجاء إدخال بيانات المستخدم المعتمدة للبيع' : 'Enter authorized credentials to proceed'}
+                </p>
+              </div>
+
+              {loginError && (
+                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
+                  ⚠️ {loginError}
+                </div>
+              )}
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const success = loginUser(loginUsername, loginPassword);
+                  if (success) {
+                    setLoginUsername('');
+                    setLoginPassword('');
+                    setLoginError('');
+                  } else {
+                    setLoginError(isRtl ? 'اسم المستخدم أو كلمة المرور خاطئة!' : 'Incorrect username or password!');
+                  }
+                }}
+                className="space-y-4 text-xs font-semibold"
+              >
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-slate-400 block mb-1">{isRtl ? 'اسم المستخدم (البريد)' : 'Username (Email)'}</label>
+                  <input
+                    type="text"
+                    placeholder={isRtl ? "مثال: owner, cashier" : "e.g. owner, cashier"}
+                    value={loginUsername}
+                    onChange={e => setLoginUsername(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200 font-sans"
+                  />
+                </div>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-slate-400 block mb-1">{isRtl ? 'كلمة المرور' : 'Password'}</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={e => setLoginPassword(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md text-xs mt-2"
+                >
+                  {isRtl ? 'تسجيل الدخول' : 'Login'}
+                </button>
+              </form>
+
+              <div className="text-center pt-1 border-t border-slate-200/20 pt-3">
+                <button 
+                  onClick={() => setLandingView('signup')} 
+                  className="text-xs text-blue-500 hover:underline font-bold"
+                >
+                  {isRtl ? 'تسجيل عميل جديد (حساب تجاري)' : 'Register New Merchant Account'}
+                </button>
+              </div>
+
+              <div className="border-t pt-3 text-[10px] text-slate-400 text-center space-y-1 font-mono">
+                <div>💡 {isRtl ? 'الحسابات الافتراضية للتجربة:' : 'Seeded demo credentials:'}</div>
+                <div>owner / owner123 (صلاحيات كاملة)</div>
+                <div>cashier / cashier123 (بيع فقط)</div>
+              </div>
+            </>
           )}
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const success = loginUser(loginUsername, loginPassword);
-              if (success) {
-                setLoginUsername('');
-                setLoginPassword('');
-                setLoginError('');
-              } else {
-                setLoginError(isRtl ? 'اسم المستخدم أو كلمة المرور خاطئة!' : 'Incorrect username or password!');
-              }
-            }}
-            className="space-y-4 text-xs font-semibold"
-          >
-            <div>
-              <label className="text-slate-400 block mb-1">{isRtl ? 'اسم المستخدم' : 'Username'}</label>
-              <input
-                type="text"
-                placeholder={isRtl ? "مثال: owner, cashier" : "e.g. owner, cashier"}
-                value={loginUsername}
-                onChange={e => setLoginUsername(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-center focus:outline-none text-slate-800 dark:text-slate-200 font-sans"
-              />
-            </div>
-            <div>
-              <label className="text-slate-400 block mb-1">{isRtl ? 'كلمة المرور' : 'Password'}</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={loginPassword}
-                onChange={e => setLoginPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-center focus:outline-none text-slate-800 dark:text-slate-200"
-              />
-            </div>
+          {landingView === 'signup' && (
+            <>
+              <div className="text-center space-y-2">
+                <img src="/logo.png" alt="smart POS" className="h-20 mx-auto object-contain mb-2 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
+                  {isRtl ? 'تسجيل حساب تجاري جديد' : 'Register Business Account'}
+                </h2>
+                <p className="text-xs text-slate-400">
+                  {isRtl ? 'ابدأ بإعداد نظام الكاشير لشركتك الآن' : 'Start configuring your retail POS system'}
+                </p>
+              </div>
 
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md text-xs mt-2"
-            >
-              {isRtl ? 'تسجيل الدخول' : 'Login'}
-            </button>
-          </form>
+              {signupError && (
+                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
+                  ⚠️ {signupError}
+                </div>
+              )}
 
-          <div className="border-t pt-3 text-[10px] text-slate-400 text-center space-y-1 font-mono">
-            <div>💡 {isRtl ? 'الحسابات الافتراضية للتجربة:' : 'Seeded demo credentials:'}</div>
-            <div>owner / owner123 (صلاحيات كاملة)</div>
-            <div>cashier / cashier123 (بيع فقط)</div>
-          </div>
+              <form onSubmit={handleSignupSubmit} className="space-y-3.5 text-xs font-semibold">
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-slate-400 block mb-1">{isRtl ? 'الاسم الكامل' : 'Full Name'}</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={isRtl ? "مثال: أحمد محمد" : "e.g. John Doe"}
+                    value={signupName}
+                    onChange={e => setSignupName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-slate-400 block mb-1">{isRtl ? 'البريد الإلكتروني' : 'Email Address'}</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="name@company.com"
+                    value={signupEmail}
+                    onChange={e => setSignupEmail(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200 font-sans"
+                  />
+                </div>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-slate-400 block mb-1">{isRtl ? 'كلمة المرور' : 'Password'}</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={signupPassword}
+                    onChange={e => setSignupPassword(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-slate-400 block mb-1">{isRtl ? 'تأكيد كلمة المرور' : 'Confirm Password'}</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={signupConfirmPassword}
+                    onChange={e => setSignupConfirmPassword(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={otpLoading}
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-md text-xs mt-2 disabled:opacity-50"
+                >
+                  {otpLoading ? (isRtl ? 'جاري التحضير...' : 'Preparing...') : (isRtl ? 'تسجيل وإرسال كود التفعيل' : 'Sign Up & Send Code')}
+                </button>
+              </form>
+
+              <div className="text-center pt-2 border-t border-slate-200/20">
+                <span className="text-slate-400 text-xs">{isRtl ? 'لديك حساب بالفعل؟ ' : 'Already have an account? '}</span>
+                <button 
+                  onClick={() => setLandingView('login')} 
+                  className="text-xs text-blue-500 hover:underline font-bold"
+                >
+                  {isRtl ? 'تسجيل الدخول' : 'Login'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {landingView === 'otp' && (
+            <>
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-500 text-2xl animate-bounce">
+                  ✉️
+                </div>
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
+                  {isRtl ? 'تأكيد الحساب والبريد' : 'Verify Email Address'}
+                </h2>
+                <p className="text-xs text-slate-400 leading-relaxed font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+                  {isRtl 
+                    ? `أدخل كود التحقق المكون من 4 أرقام المرسل إلى البريد ${signupEmail}` 
+                    : `Enter the 4-digit code sent to ${signupEmail}`}
+                </p>
+              </div>
+
+              {otpError && (
+                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
+                  ⚠️ {otpError}
+                </div>
+              )}
+
+              {otpSuccess ? (
+                <div className="p-6 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-500 text-xl font-bold">
+                    ✓
+                  </div>
+                  <h4 className="font-extrabold text-sm text-emerald-500">{isRtl ? 'تم تأكيد الحساب بنجاح!' : 'Account Confirmed!'}</h4>
+                  <p className="text-[10px] text-slate-400">{isRtl ? 'جاري توجيهك لصفحة الدخول...' : 'Redirecting to login...'}</p>
+                </div>
+              ) : (
+                <form onSubmit={handleOtpVerify} className="space-y-4 text-xs font-semibold">
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      maxLength={4}
+                      required
+                      placeholder="1234"
+                      value={otpCode}
+                      onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-40 mx-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-center focus:outline-none text-lg text-slate-800 dark:text-slate-200 font-mono tracking-widest block"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={otpLoading}
+                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md text-xs disabled:opacity-50"
+                  >
+                    {otpLoading ? (isRtl ? 'جاري التأكيد...' : 'Verifying...') : (isRtl ? 'تأكيد الرمز وتفعيل الحساب' : 'Verify & Activate')}
+                  </button>
+                </form>
+              )}
+
+              {!otpSuccess && (
+                <div className="text-center pt-2 border-t border-slate-200/20">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      alert(isRtl ? 'تم إعادة إرسال الرمز (1234) للاختبار.' : 'Code (1234) resent for testing.');
+                    }}
+                    className="text-[10px] text-slate-400 hover:underline"
+                  >
+                    {isRtl ? 'إعادة إرسال الرمز' : 'Resend Verification Code'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
         </div>
       </div>
     );

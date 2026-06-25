@@ -1167,34 +1167,47 @@ export const POS: React.FC = () => {
                   <div
                     key={p.id}
                     onClick={() => handleProductClick(p)}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between h-36 ${
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between h-36 ${
                       hasLowStock 
                         ? 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10' 
                         : 'glass-card border-slate-200/30 dark:border-slate-800/30 hover:border-blue-500/40 hover:bg-blue-500/5'
                     }`}
                   >
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <span className="text-[10px] font-bold text-slate-400 capitalize">{p.category}</span>
-                        {p.is_pharmaceutical === 1 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSubstSearch(p);
-                            }}
-                            className="px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 font-bold text-[9px] flex items-center gap-0.5 font-sans"
-                            title="البدائل الدوائية"
-                          >
-                            🧬 {isRtl ? 'البدائل' : 'Subst'}
-                          </button>
+                    <div className="flex gap-2 items-start min-w-0">
+                      {p.image_base64 ? (
+                        <img 
+                          src={p.image_base64} 
+                          alt="" 
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-200/50 dark:border-slate-850" 
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 text-slate-400 text-base border border-slate-200/50 dark:border-slate-850">
+                          📦
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex justify-between items-start gap-1">
+                          <span className="text-[9px] font-bold text-slate-400 capitalize truncate">{p.category}</span>
+                          {p.is_pharmaceutical === 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSubstSearch(p);
+                              }}
+                              className="px-1 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 font-bold text-[8px] flex items-center gap-0.5 font-sans"
+                              title="البدائل الدوائية"
+                            >
+                              🧬
+                            </button>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-[11px] mt-0.5 text-slate-850 dark:text-slate-100 line-clamp-2 leading-tight">
+                          {isRtl ? p.name_ar : p.name_en}
+                        </h4>
+                        {p.scientific_name && (
+                          <div className="text-[8px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{p.scientific_name}</div>
                         )}
                       </div>
-                      <h4 className="font-bold text-xs mt-1 text-slate-800 dark:text-slate-100 line-clamp-2">
-                        {isRtl ? p.name_ar : p.name_en}
-                      </h4>
-                      {p.scientific_name && (
-                        <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{p.scientific_name}</div>
-                      )}
                     </div>
 
                     <div className="flex justify-between items-end pt-2 border-t border-slate-100 dark:border-slate-850">

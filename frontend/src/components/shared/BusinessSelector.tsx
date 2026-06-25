@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   Building2,
   Percent,
-  Phone
+  Phone,
+  Warehouse
 } from 'lucide-react';
 
 export const BusinessSelector: React.FC = () => {
@@ -86,6 +87,15 @@ export const BusinessSelector: React.FC = () => {
       desc_en: 'Container cargo shipping tracker, customs tariff calculations, and multi-currency registers.',
       icon: Ship,
       color: 'from-teal-500 to-emerald-600 border-teal-500/20'
+    },
+    {
+      id: 'warehouse' as BusinessType,
+      title_ar: 'المستودعات والمخازن والخدمات اللوجستية',
+      title_en: 'Warehouses, Stock & Logistics',
+      desc_ar: 'إدارة المخزون متعدد الفروع والمواقع، جرد البضائع بالباركود، وطباعة ملصقات الرفوف.',
+      desc_en: 'Multi-location inventory tracking, barcode physical audits, stock adjustments, and bin labels.',
+      icon: Warehouse,
+      color: 'from-blue-600 to-cyan-600 border-blue-500/20'
     }
   ];
 
