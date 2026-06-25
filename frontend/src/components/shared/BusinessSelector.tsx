@@ -67,7 +67,7 @@ export const BusinessSelector: React.FC = () => {
       desc_ar: 'تتبع الباتشات والتواريخ، البدائل العلمية للأدوية، وتنبيهات انتهاء الصلاحية.',
       desc_en: 'Batch tracking, drug scientific substitutions, expiry indicators, and prescription logs.',
       icon: Pill,
-      color: 'from-blue-500 to-indigo-600 border-blue-500/20'
+      color: 'from-blue-500 to-emerald-600 border-blue-500/20'
     },
     {
       id: 'retail' as BusinessType,
@@ -129,7 +129,7 @@ export const BusinessSelector: React.FC = () => {
         
         {/* Top brand header */}
         <div className="text-center space-y-3">
-          <img src="/logo.jpg" alt="smart POS Logo" className="h-28 mx-auto object-contain rounded-2xl shadow-xl border border-slate-700 bg-slate-900" />
+          <img src="/logo.png" alt="smart POS Logo" className="h-36 mx-auto object-contain mb-4 filter drop-shadow-[0_0_20px_rgba(59,130,246,0.25)]" />
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold animate-pulse">
             <Sparkles className="h-3.5 w-3.5" />
             {isRtl ? 'إعداد وتهيئة نظام smart POS الذكي' : 'Setup smart POS Intelligent System'}

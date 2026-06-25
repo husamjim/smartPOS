@@ -38,3 +38,6 @@ media__*/
 
 # SQLite database
 backend/database.db
+
+.vercel
+.env*

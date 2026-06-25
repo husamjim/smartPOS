@@ -123,8 +123,8 @@ export default function App() {
       <div className={`min-h-screen flex items-center justify-center p-6 ${theme === 'dark' ? 'dark bg-[#090d16]' : 'bg-slate-50'}`}>
         <div className="glass-card p-8 rounded-2xl max-w-sm w-full space-y-5 border border-slate-200/50 dark:border-slate-800/50 text-right">
           <div className="text-center space-y-2">
-            <img src="/logo.jpg" alt="smart POS" className="h-28 mx-auto object-contain mb-4 rounded-xl shadow-md border border-slate-700 bg-slate-900" />
-            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent font-sans">
+            <img src="/logo.png" alt="smart POS" className="h-36 mx-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
               {isRtl ? 'تسجيل الدخول للنظام' : 'System Login'}
             </h2>
             <p className="text-xs text-slate-400">
@@ -205,7 +205,7 @@ export default function App() {
     ...(businessType === 'restaurant' ? [{ id: 'kds' as const, label: t('kds'), icon: ChefHat }] : []),
     ...((currentUser?.role !== 'cashier') ? [
       { id: 'reports' as const, label: t('reports'), icon: BarChart3 },
-      { id: 'ai_assistant' as const, label: t('ai_assistant'), icon: Sparkles, color: 'text-indigo-500' },
+      { id: 'ai_assistant' as const, label: t('ai_assistant'), icon: Sparkles, color: 'text-cyan-500' },
       { id: 'settings' as const, label: t('settings'), icon: SettingsIcon }
     ] : [])
   ];
@@ -223,8 +223,8 @@ export default function App() {
           {/* Logo Brand */}
           <div className="px-4 flex items-center justify-between">
             {!sidebarCollapsed && (
-              <span className="font-extrabold text-base tracking-wide bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2 font-sans">
-                <img src="/logo.jpg" alt="smart POS" className="h-8 w-8 rounded-lg object-cover border border-slate-700 bg-slate-900" />
+              <span className="font-extrabold text-base tracking-wide bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 bg-clip-text text-transparent flex items-center gap-2 font-sans">
+                <img src="/logo.png" alt="smart POS" className="h-10 w-10 object-contain" />
                 <span>{isRtl ? 'سمارت POS' : 'smart POS'}</span>
               </span>
             )}
@@ -265,7 +265,7 @@ export default function App() {
             {!sidebarCollapsed ? (
               <div className="min-w-0 flex-1">
                 <p className="font-bold truncate text-slate-800 dark:text-slate-200 capitalize">👤 {currentUser?.username}</p>
-                <p className="text-[9px] text-indigo-500 font-extrabold uppercase mt-0.5">{currentUser?.role}</p>
+                <p className="text-[9px] text-blue-500 font-extrabold uppercase mt-0.5">{currentUser?.role}</p>
               </div>
             ) : null}
             <button
