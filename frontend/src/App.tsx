@@ -65,7 +65,7 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Derive RTL flag early so it's available in the login overlay below
+  // Derive RTL flag - always computed regardless of render path
   const isRtl = language === 'ar';
 
   // Reset tab if businessType switches and hides KDS
