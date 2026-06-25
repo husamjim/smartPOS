@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm install --prefix frontend --legacy-peer-deps && npm run build:vercel --prefix frontend",
+  "installCommand": "npm install --prefix frontend --legacy-peer-deps",
+  "buildCommand": "npm --prefix frontend run build:vercel",
   "outputDirectory": "frontend/dist",
   "cleanUrls": true,
   "rewrites": [
