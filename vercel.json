@@ -1,7 +1,6 @@
 {
-  "buildCommand": "cd frontend && npm install --legacy-peer-deps && npx vite build",
+  "buildCommand": "npm install --prefix frontend --legacy-peer-deps && npm run build:vercel --prefix frontend",
   "outputDirectory": "frontend/dist",
-  "installCommand": "echo skip-root-install",
   "cleanUrls": true,
   "rewrites": [
     {
