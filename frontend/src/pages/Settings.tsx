@@ -40,16 +40,28 @@ export const Settings: React.FC = () => {
   } = useApp();
 
   const [tables, setTables] = React.useState<string[]>(() => {
-    const saved = localStorage.getItem('pos_restaurant_tables');
-    return saved ? JSON.parse(saved) : ['Table 1', 'Table 2', 'Table 3', 'Table 4', 'Table 5', 'Table 6'];
+    try {
+      const saved = localStorage.getItem('pos_restaurant_tables');
+      return saved ? JSON.parse(saved) : ['Table 1', 'Table 2', 'Table 3', 'Table 4', 'Table 5', 'Table 6'];
+    } catch (e) {
+      return ['Table 1', 'Table 2', 'Table 3', 'Table 4', 'Table 5', 'Table 6'];
+    }
   });
   const [availableSizes, setAvailableSizes] = React.useState<string[]>(() => {
-    const saved = localStorage.getItem('pos_retail_sizes');
-    return saved ? JSON.parse(saved) : ['S', 'M', 'L', 'XL'];
+    try {
+      const saved = localStorage.getItem('pos_retail_sizes');
+      return saved ? JSON.parse(saved) : ['S', 'M', 'L', 'XL'];
+    } catch (e) {
+      return ['S', 'M', 'L', 'XL'];
+    }
   });
   const [availableColors, setAvailableColors] = React.useState<string[]>(() => {
-    const saved = localStorage.getItem('pos_retail_colors');
-    return saved ? JSON.parse(saved) : ['Red', 'Blue', 'Black'];
+    try {
+      const saved = localStorage.getItem('pos_retail_colors');
+      return saved ? JSON.parse(saved) : ['Red', 'Blue', 'Black'];
+    } catch (e) {
+      return ['Red', 'Blue', 'Black'];
+    }
   });
 
   const [newTableName, setNewTableName] = React.useState('');

@@ -132,23 +132,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // User management
   const [users, setUsers] = useState<AppUser[]>(() => {
-    const saved = localStorage.getItem('pos_users');
-    return saved ? JSON.parse(saved) : DEFAULT_USERS;
+    try {
+      const saved = localStorage.getItem('pos_users');
+      return saved ? JSON.parse(saved) : DEFAULT_USERS;
+    } catch (e) {
+      return DEFAULT_USERS;
+    }
   });
 
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
-    const saved = localStorage.getItem('pos_current_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('pos_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
   });
 
   // Shift management
   const [activeShift, setActiveShift] = useState<ShiftRecord | null>(() => {
-    const s = localStorage.getItem('pos_active_shift');
-    return s ? JSON.parse(s) : null;
+    try {
+      const s = localStorage.getItem('pos_active_shift');
+      return s ? JSON.parse(s) : null;
+    } catch (e) {
+      return null;
+    }
   });
   const [shiftHistory, setShiftHistory] = useState<ShiftRecord[]>(() => {
-    const s = localStorage.getItem('pos_shift_history');
-    return s ? JSON.parse(s) : [];
+    try {
+      const s = localStorage.getItem('pos_shift_history');
+      return s ? JSON.parse(s) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   // ── Effects ──────────────────────────────────────────────────────────────
