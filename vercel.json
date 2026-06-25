@@ -1,0 +1,11 @@
+{
+  "installCommand": "npm install --prefix frontend --legacy-peer-deps",
+  "buildCommand": "npm --prefix frontend run build:vercel",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
