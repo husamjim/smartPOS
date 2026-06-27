@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  Monitor, 
   ChefHat, 
   Pill, 
   Shirt, 
@@ -11,17 +10,14 @@ import {
   Lock, 
   UserPlus, 
   Wifi, 
-  Terminal, 
   ArrowRight,
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight
+  ArrowLeft
 } from 'lucide-react';
 
 interface LandingPageProps {
   language: string;
   changeLanguage: (lng: string) => void;
-  onNavigate: (view: 'login' | 'signup') => void;
+  onNavigate: (view: 'login' | 'signup' | 'demo') => void;
 }
 
 const translations: Record<string, any> = {
@@ -52,7 +48,8 @@ const translations: Record<string, any> = {
     globalDesc: "مهيأ بالكامل للجمهور العالمي بـ 5 لغات مدعومة، مع تكامل العملات والضرائب.",
     secureTitle: "أمان واستقرار فائق",
     secureDesc: "تشفير كامل للبيانات، إدارة صلاحيات دقيقة للموظفين، وحفظ احتياطي دوري.",
-    tagline: "النظام الذكي المتكامل للبيع وإدارة الموارد"
+    tagline: "النظام الذكي المتكامل للبيع وإدارة الموارد",
+    demoBtn: "🔥 تجربة ديمو سريعة"
   },
   en: {
     heroTitle: "Intelligent Cashier POS & Full ERP System",
@@ -81,7 +78,8 @@ const translations: Record<string, any> = {
     globalDesc: "Fully optimized for global audiences with 5 languages, customizable taxes, and currencies.",
     secureTitle: "Premium Security & Speed",
     secureDesc: "End-to-end local data encryption, granular employee permissions, and scheduled backups.",
-    tagline: "Integrated POS/ERP for Smart Businesses"
+    tagline: "Integrated POS/ERP for Smart Businesses",
+    demoBtn: "🔥 Try Quick Demo"
   },
   fr: {
     heroTitle: "Système Intelligent POS de Caisse et ERP Complet",
@@ -110,7 +108,8 @@ const translations: Record<string, any> = {
     globalDesc: "Optimisé pour un public mondial avec 5 langues, taxes personnalisées et devises.",
     secureTitle: "Sécurité & Stabilité Premium",
     secureDesc: "Chiffrement des données locales, autorisations des employés et sauvegardes régulières.",
-    tagline: "Système POS/ERP Intégré pour Entreprises Intelligentes"
+    tagline: "Système POS/ERP Intégré pour Entreprises Intelligentes",
+    demoBtn: "🔥 Démo Rapide"
   },
   de: {
     heroTitle: "Intelligentes Kassensystem (POS) & Komplettes ERP",
@@ -139,7 +138,8 @@ const translations: Record<string, any> = {
     globalDesc: "Optimiert für weltweite Kunden mit 5 Sprachen, anpassbaren Steuern und Währungen.",
     secureTitle: "Premium-Sicherheit & Stabilität",
     secureDesc: "Lokale Datenverschlüsselung, granulare Benutzerrechte und regelmäßige Backups.",
-    tagline: "Integriertes POS/ERP für intelligente Unternehmen"
+    tagline: "Integriertes POS/ERP für intelligente Unternehmen",
+    demoBtn: "🔥 Kassendemo"
   },
   zh: {
     heroTitle: "智能收银 POS 兼一体化 ERP 系统",
@@ -167,8 +167,9 @@ const translations: Record<string, any> = {
     globalTitle: "面向全球化设计",
     globalDesc: "支持 5 种语言、可自定义税率和货币，完全为全球商户量身定制。",
     secureTitle: "安全保障与稳定性",
-    secureDesc: "端到端本地数据加密、细粒度的员工权限管理以及定期自动备份。",
-    tagline: "智能商户一体化收银 POS/ERP 系统"
+    secureDesc: "端到端本地 data 加密、细粒度的员工权限管理以及定期自动备份。",
+    tagline: "智能商户一体化收银 POS/ERP 系统",
+    demoBtn: "🔥 快速演示模式"
   }
 };
 
@@ -220,6 +221,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ language, changeLangua
           </div>
 
           <button 
+            onClick={() => onNavigate('demo')}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-orange-400 border border-orange-500/20 text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>{isRtl ? 'ديمو' : 'Demo'}</span>
+          </button>
+
+          <button 
             onClick={() => onNavigate('login')}
             className="px-4 py-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 text-xs font-bold transition-all shadow-md"
           >
@@ -257,6 +266,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ language, changeLangua
               {isRtl ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
             </button>
             
+            <button 
+              onClick={() => onNavigate('demo')}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-sm shadow-lg shadow-orange-950/35 transition-all flex items-center justify-center gap-2 font-sans border-none"
+            >
+              <Sparkles className="h-4.5 w-4.5 animate-pulse" />
+              <span>{t.demoBtn}</span>
+            </button>
+
             <button 
               onClick={() => onNavigate('login')}
               className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-850 hover:border-slate-750 text-slate-200 font-bold text-sm transition-all"

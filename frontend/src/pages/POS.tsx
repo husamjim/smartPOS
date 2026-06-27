@@ -50,6 +50,7 @@ export const POS: React.FC = () => {
   
   // Coupon input
   const [couponInput, setCouponInput] = useState('');
+  const [popularProducts, setPopularProducts] = useState<LocalProduct[]>([]);
   
   // Medicine substitution modal
   const [substProduct, setSubstProduct] = useState<LocalProduct | null>(null);
@@ -214,6 +215,64 @@ export const POS: React.FC = () => {
   useEffect(() => {
     loadPOSData();
   }, []);
+
+  useEffect(() => {
+    const loadPopular = async () => {
+      try {
+        const allOrderItems = await db.orderItems.toArray();
+        
+        // Filter products of this business type
+        const activeProducts = products.filter(prod => {
+          if (businessType === 'restaurant') {
+            return ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant'].includes(prod.category);
+          } else if (businessType === 'pharmacy') {
+            return prod.is_pharmaceutical === 1;
+          } else {
+            return prod.is_pharmaceutical !== 1 && !['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant', 'raw_material'].includes(prod.category);
+          }
+        });
+        const activeProdIds = new Set(activeProducts.map(prod => prod.id));
+
+        const productCounts: { [key: string]: number } = {};
+        for (const item of allOrderItems) {
+          if (activeProdIds.has(item.product_id)) {
+            productCounts[item.product_id] = (productCounts[item.product_id] || 0) + item.quantity;
+          }
+        }
+
+        // Sort by popularity
+        const sortedProdIds = Object.keys(productCounts).sort((a, b) => productCounts[b] - productCounts[a]);
+        
+        const topProducts: LocalProduct[] = [];
+        // Get the top 2
+        for (const pid of sortedProdIds) {
+          const prod = activeProducts.find(prod => prod.id === pid);
+          if (prod) {
+            topProducts.push(prod);
+            if (topProducts.length >= 2) break;
+          }
+        }
+
+        // If we don't have enough orders to determine top 2, fall back to the first 2 products of this business type
+        if (topProducts.length < 2) {
+          for (const prod of activeProducts) {
+            if (!topProducts.some(tp => tp.id === prod.id)) {
+              topProducts.push(prod);
+              if (topProducts.length >= 2) break;
+            }
+          }
+        }
+
+        setPopularProducts(topProducts);
+      } catch (err) {
+        console.error("Failed to load popular products:", err);
+      }
+    };
+
+    if (products.length > 0) {
+      loadPopular();
+    }
+  }, [businessType, products]);
 
   const loadPOSData = async () => {
     const p = await db.products.toArray();
@@ -380,15 +439,34 @@ export const POS: React.FC = () => {
   const getCategoriesForBusiness = () => {
     switch (businessType) {
       case 'restaurant':
-        return ['ALL', 'Restaurant'];
+        return ['ALL', 'meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer'];
       case 'pharmacy':
         return ['ALL', 'Pharmacy'];
       case 'retail':
-        return ['ALL', 'Food', 'Clothing'];
+        return ['ALL', 'Food', 'Clothing', 'Electronics'];
       case 'wholesale':
-        return ['ALL', 'Food'];
+        return ['ALL', 'Food', 'Imported', 'Electronics'];
       default:
         return ['ALL', 'Food', 'Restaurant', 'Pharmacy'];
+    }
+  };
+
+  const getCategoryLabel = (cat: string) => {
+    if (cat === 'ALL') return isRtl ? 'الكل' : 'All';
+    switch (cat) {
+      case 'meal': return isRtl ? 'وجبات' : 'Meals';
+      case 'sandwich': return isRtl ? 'ساندوتشات' : 'Sandwiches';
+      case 'drink': return isRtl ? 'مشروبات' : 'Drinks';
+      case 'dessert': return isRtl ? 'حلويات' : 'Desserts';
+      case 'salad': return isRtl ? 'سلطات' : 'Salads';
+      case 'appetizer': return isRtl ? 'مقبلات' : 'Appetizers';
+      case 'raw_material': return isRtl ? 'مواد خام' : 'Raw Materials';
+      case 'Pharmacy': return isRtl ? 'صيدلية وأدوية' : 'Pharmacy';
+      case 'Food': return isRtl ? 'أغذية' : 'Food';
+      case 'Clothing': return isRtl ? 'ملابس' : 'Clothing';
+      case 'Electronics': return isRtl ? 'إلكترونيات' : 'Electronics';
+      case 'Imported': return isRtl ? 'مستوردات' : 'Imported';
+      default: return cat;
     }
   };
 
@@ -396,17 +474,20 @@ export const POS: React.FC = () => {
 
   const filteredProducts = products.filter(p => {
     // 1. Strict Business Type Product Isolation
-    if (businessType === 'restaurant' && p.category !== 'Restaurant') {
-      return false;
-    }
-    if (businessType === 'pharmacy' && p.is_pharmaceutical !== 1) {
-      return false;
-    }
-    if (businessType === 'retail' && (p.is_pharmaceutical === 1 || p.category === 'Restaurant')) {
-      return false;
-    }
-    if (businessType === 'wholesale' && (p.is_pharmaceutical === 1 || p.category === 'Restaurant')) {
-      return false;
+    if (businessType === 'restaurant') {
+      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant'];
+      if (!restaurantCategories.includes(p.category)) {
+        return false;
+      }
+    } else if (businessType === 'pharmacy') {
+      if (p.is_pharmaceutical !== 1) return false;
+    } else {
+      // retail, wholesale, or warehouse
+      // Exclude pharmacy products and restaurant products and raw materials
+      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant', 'raw_material'];
+      if (p.is_pharmaceutical === 1 || restaurantCategories.includes(p.category)) {
+        return false;
+      }
     }
 
     // 2. Category Tab Filter
@@ -1107,18 +1188,15 @@ export const POS: React.FC = () => {
               </div>
 
               <div className="flex gap-1.5 text-[10px] font-bold">
-                <button
-                  onClick={() => handleBarcodeScanSim('62811001')}
-                  className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-sans"
-                >
-                  📷 مسح زيت زيتون
-                </button>
-                <button
-                  onClick={() => handleBarcodeScanSim('3011007')}
-                  className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-sans"
-                >
-                  💊 مسح بنادول
-                </button>
+                {popularProducts.map((prod) => (
+                  <button
+                    key={prod.id}
+                    onClick={() => handleProductClick(prod)}
+                    className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-1 text-slate-700 dark:text-slate-300"
+                  >
+                    🔥 {isRtl ? `الأكثر طلباً: ${prod.name_ar}` : `Best Seller: ${prod.name_en}`}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -1134,10 +1212,7 @@ export const POS: React.FC = () => {
                       : 'bg-white/40 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100'
                   }`}
                 >
-                  {cat === 'ALL' ? (isRtl ? 'الكل' : 'All') :
-                   cat === 'Food' ? (isRtl ? 'مأكولات' : 'Retail Food') :
-                   cat === 'Restaurant' ? (isRtl ? 'الوجبات' : 'Kitchen Rest') :
-                   (isRtl ? 'الصيدلية' : 'Pharmacy')}
+                  {getCategoryLabel(cat)}
                 </button>
               ))}
             </div>

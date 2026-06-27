@@ -37,7 +37,7 @@ export const ERP: React.FC = () => {
   useEffect(() => {
     if (showAddProdModal) {
       if (businessType === 'restaurant') {
-        setProdCategory('Restaurant');
+        setProdCategory('meal');
         setIsPhar(false);
       } else if (businessType === 'pharmacy') {
         setProdCategory('Pharmacy');
@@ -64,6 +64,20 @@ export const ERP: React.FC = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  
+  // Supplier form fields
+  const [supName, setSupName] = useState('');
+  const [supContact, setSupContact] = useState('');
+  const [supPhone, setSupPhone] = useState('');
+  const [supEmail, setSupEmail] = useState('');
+  const [supBalance, setSupBalance] = useState(0);
+
+  // Add stock batch fields
+  const [addBatchProdId, setAddBatchProdId] = useState('');
+  const [addBatchWh, setAddBatchWh] = useState('');
+  const [addBatchNum, setAddBatchNum] = useState('');
+  const [addBatchExpiry, setAddBatchExpiry] = useState('');
+  const [addBatchQty, setAddBatchQty] = useState('');
   
   // Expense fields
   const [expenseAmount, setExpenseAmount] = useState(0);
@@ -160,8 +174,14 @@ export const ERP: React.FC = () => {
     const b = await db.batches.toArray();
     setBatches(b);
 
-    if (activeSubTab === 'inventory' && p.length > 0 && !transferProdId) {
-      setTransferProdId(p[0].id);
+    if (activeSubTab === 'inventory' && p.length > 0) {
+      if (!transferProdId) setTransferProdId(p[0].id);
+      if (!addBatchProdId) setAddBatchProdId(p[0].id);
+      if (!addBatchWh) {
+        if (businessType === 'restaurant') setAddBatchWh('wh_kitchen');
+        else if (businessType === 'pharmacy') setAddBatchWh('wh_riyadh_2');
+        else setAddBatchWh('wh_riyadh_1');
+      }
     }
 
     if (activeSubTab === 'purchases') {
@@ -336,6 +356,78 @@ export const ERP: React.FC = () => {
     await loadData();
   };
 
+  const handleAddSupplier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supName.trim()) return;
+    const newSup = {
+      id: 's_' + Date.now(),
+      name: supName,
+      contact_name: supContact,
+      phone: supPhone,
+      email: supEmail,
+      balance: supBalance
+    };
+    await db.suppliers.add(newSup);
+    setSupName('');
+    setSupContact('');
+    setSupPhone('');
+    setSupEmail('');
+    setSupBalance(0);
+    // Refresh suppliers list
+    const s = await db.suppliers.toArray();
+    setSuppliers(s);
+  };
+
+  const handleDeleteSupplier = async (id: string) => {
+    if (confirm(isRtl ? 'هل أنت متأكد من حذف هذا المورد؟' : 'Are you sure you want to delete this supplier?')) {
+      await db.suppliers.delete(id);
+      // Refresh suppliers list
+      const s = await db.suppliers.toArray();
+      setSuppliers(s);
+    }
+  };
+
+  const handleAddBatchStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addBatchProdId || !addBatchQty || parseFloat(addBatchQty) <= 0) return;
+    
+    const qtyNum = parseFloat(addBatchQty);
+    const finalBatchNum = addBatchNum.trim() || ('BCH-' + Math.floor(1000 + Math.random() * 9000));
+    
+    // Check if there is an existing batch with the same product, warehouse, and batch number
+    const existing = await db.batches
+      .where({
+        product_id: addBatchProdId,
+        warehouse_id: addBatchWh,
+        batch_number: finalBatchNum
+      })
+      .first();
+      
+    if (existing) {
+      await db.batches.update(existing.id, {
+        quantity: existing.quantity + qtyNum
+      });
+    } else {
+      await db.batches.add({
+        id: 'b_' + Math.random().toString(36).substr(2, 9),
+        product_id: addBatchProdId,
+        warehouse_id: addBatchWh,
+        batch_number: finalBatchNum,
+        expiry_date: addBatchExpiry || undefined,
+        quantity: qtyNum
+      });
+    }
+    
+    // Reset form fields
+    setAddBatchQty('');
+    setAddBatchExpiry('');
+    setAddBatchNum('');
+    
+    // Refresh data
+    await loadData();
+    alert(isRtl ? 'تم إضافة المخزون للدفعة بنجاح!' : 'Stock added to batch successfully!');
+  };
+
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (expenseAmount <= 0) return;
@@ -504,17 +596,19 @@ export const ERP: React.FC = () => {
 
   const filteredProducts = products.filter(p => {
     // Strict Business Type Product Isolation for ERP
-    if (businessType === 'restaurant' && p.category !== 'Restaurant') {
-      return false;
-    }
-    if (businessType === 'pharmacy' && p.is_pharmaceutical !== 1) {
-      return false;
-    }
-    if (businessType === 'retail' && (p.is_pharmaceutical === 1 || p.category === 'Restaurant')) {
-      return false;
-    }
-    if (businessType === 'wholesale' && (p.is_pharmaceutical === 1 || p.category === 'Restaurant')) {
-      return false;
+    if (businessType === 'restaurant') {
+      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant', 'raw_material'];
+      if (!restaurantCategories.includes(p.category)) {
+        return false;
+      }
+    } else if (businessType === 'pharmacy') {
+      if (p.is_pharmaceutical !== 1) return false;
+    } else {
+      // retail, wholesale or warehouse
+      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant'];
+      if (p.is_pharmaceutical === 1 || (businessType !== 'warehouse' && restaurantCategories.includes(p.category))) {
+        return false;
+      }
     }
 
     return (
@@ -541,26 +635,28 @@ export const ERP: React.FC = () => {
             onClick={() => setActiveSubTab('products')}
             className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'products' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
           >
-            {isRtl ? 'قائمة المنتجات' : 'Products'}
+            {businessType === 'restaurant' ? (isRtl ? 'إضافة الوجبات والمنتجات' : 'Add Meals & Products') : (isRtl ? 'قائمة المنتجات' : 'Products')}
           </button>
           <button
             onClick={() => setActiveSubTab('inventory')}
             className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'inventory' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
           >
-            {isRtl ? 'المستودعات والتحويل' : 'Warehouses & Transfer'}
+            {businessType === 'restaurant' ? (isRtl ? 'مستودع المكونات والمخزون' : 'Ingredients Warehouse') : (isRtl ? 'المستودعات والتحويل' : 'Warehouses & Transfer')}
           </button>
           <button
             onClick={() => setActiveSubTab('purchases')}
             className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'purchases' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
           >
-            {isRtl ? 'المشتريات والموردين' : 'Purchasing'}
+            {isRtl ? 'إدارة الموردين' : 'Suppliers Hub'}
           </button>
-          <button
-            onClick={() => setActiveSubTab('expenses')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'expenses' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
-          >
-            {isRtl ? 'إدارة المصروفات' : 'Expenses'}
-          </button>
+          {businessType !== 'restaurant' && (
+            <button
+              onClick={() => setActiveSubTab('expenses')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'expenses' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
+            >
+              {isRtl ? 'إدارة المصروفات' : 'Expenses'}
+            </button>
+          )}
           {businessType === 'restaurant' && (
             <button
               onClick={() => setActiveSubTab('recipes')}
@@ -679,18 +775,18 @@ export const ERP: React.FC = () => {
         {activeSubTab === 'inventory' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Warehouses list */}
-            <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4">
+            <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4 animate-fade-in">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <Archive className="h-4.5 w-4.5 text-blue-500" />
                 {isRtl ? 'المخزون الحالي والباتشات في المستودعات' : 'Inventory & Batches'}
               </h3>
 
-              <div className="overflow-x-auto max-h-[340px]">
+              <div className="overflow-x-auto max-h-[360px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
                       <th className="py-2">{isRtl ? 'المنتج' : 'Product'}</th>
-                      <th>{isRtl ? 'رقم المستودع' : 'Warehouse'}</th>
+                      <th>{isRtl ? 'المستودع' : 'Warehouse'}</th>
                       <th>{isRtl ? 'رقم الدفعة (Batch)' : 'Batch No'}</th>
                       <th>{isRtl ? 'تاريخ الانتهاء' : 'Expiry'}</th>
                       <th className="text-left">{isRtl ? 'الكمية' : 'Qty'}</th>
@@ -700,10 +796,20 @@ export const ERP: React.FC = () => {
                     {batches.map(b => {
                       const prod = products.find(p => p.id === b.product_id);
                       if (!prod) return null;
+                      
+                      // Get dynamic warehouse name
+                      const getWhName = (whId: string) => {
+                        if (whId === 'wh_riyadh_1') return isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1';
+                        if (whId === 'wh_riyadh_2') return isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh WH2';
+                        if (whId === 'wh_kitchen') return isRtl ? 'مستودع المطبخ (المواد الخام)' : 'Kitchen Raw WH';
+                        if (whId === 'wh_restaurant_main') return isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH';
+                        return whId;
+                      };
+
                       return (
                         <tr key={b.id} className="border-b border-slate-100 dark:border-slate-800/40 py-2 hover:bg-slate-50/10">
                           <td className="py-2.5 font-bold">{isRtl ? prod.name_ar : prod.name_en}</td>
-                          <td>{b.warehouse_id === 'wh_riyadh_1' ? (isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1') : (isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh WH2')}</td>
+                          <td>{getWhName(b.warehouse_id)}</td>
                           <td className="font-mono text-slate-500 font-bold">{b.batch_number}</td>
                           <td className="text-slate-500 font-sans">{b.expiry_date || 'N/A'}</td>
                           <td className="text-left font-bold text-indigo-500 font-sans">{b.quantity} {prod.unit}</td>
@@ -715,76 +821,197 @@ export const ERP: React.FC = () => {
               </div>
             </div>
 
-            {/* Transfer form */}
-            <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
-              <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
-                <ArrowLeftRight className="h-4.5 w-4.5 text-emerald-500" />
-                {isRtl ? 'طلب تحويل مخزون داخلي' : 'Stock Transfer Request'}
-              </h3>
+            {/* Forms Sidebar */}
+            <div className="space-y-6">
+              {/* Add New Batch Stock Form */}
+              <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
+                <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
+                  <Plus className="h-4.5 w-4.5 text-blue-500" />
+                  {isRtl ? 'إدخال شحنة مخزون للمستودع' : 'Add Stock / Batch'}
+                </h3>
 
-              <form onSubmit={handleStockTransfer} className="space-y-3.5 text-xs font-semibold">
-                <div>
-                  <label className="text-[10px] text-slate-500 block mb-1">المستودع المصدر</label>
-                  <select
-                    value={fromWh}
-                    onChange={e => setFromWh(e.target.value)}
-                    className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                <form onSubmit={handleAddBatchStock} className="space-y-3.5 text-xs font-semibold">
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'اختر المنتج' : 'Select Product'}</label>
+                    <select
+                      value={addBatchProdId}
+                      onChange={e => setAddBatchProdId(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    >
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{isRtl ? p.name_ar : p.name_en}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'المستودع' : 'Warehouse'}</label>
+                    <select
+                      value={addBatchWh}
+                      onChange={e => setAddBatchWh(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    >
+                      {businessType === 'restaurant' ? (
+                        <>
+                          <option value="wh_kitchen">{isRtl ? 'مستودع المطبخ والمكونات' : 'Kitchen WH'}</option>
+                          <option value="wh_restaurant_main">{isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH'}</option>
+                        </>
+                      ) : businessType === 'pharmacy' ? (
+                        <>
+                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'رقم الدفعة (Batch No) - اختياري' : 'Batch Number (Optional)'}</label>
+                    <input
+                      type="text"
+                      placeholder="BCH-1092"
+                      value={addBatchNum}
+                      onChange={e => setAddBatchNum(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'تاريخ الانتهاء - اختياري' : 'Expiry Date (Optional)'}</label>
+                    <input
+                      type="date"
+                      value={addBatchExpiry}
+                      onChange={e => setAddBatchExpiry(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-750 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'الكمية المضافة' : 'Quantity to Add'}</label>
+                    <input
+                      type="number"
+                      required
+                      min={0.1}
+                      step="any"
+                      value={addBatchQty}
+                      onChange={e => setAddBatchQty(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all"
                   >
-                    <option value="wh_riyadh_1">مستودع الرياض الأول</option>
-                    <option value="wh_riyadh_2">مستودع صيدلية الرياض</option>
-                  </select>
-                </div>
+                    {isRtl ? 'تنزيل كمية المخزون' : 'Add Stock / Batch'}
+                  </button>
+                </form>
+              </div>
 
-                <div>
-                  <label className="text-[10px] text-slate-500 block mb-1">المستودع الوجهة</label>
-                  <select
-                    value={toWh}
-                    onChange={e => setToWh(e.target.value)}
-                    className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+              {/* Transfer form */}
+              <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
+                <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
+                  <ArrowLeftRight className="h-4.5 w-4.5 text-emerald-500" />
+                  {isRtl ? 'تحويل مخزون داخلي بين الفروع' : 'Stock Transfer Request'}
+                </h3>
+
+                <form onSubmit={handleStockTransfer} className="space-y-3.5 text-xs font-semibold">
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'المستودع المصدر' : 'Source Warehouse'}</label>
+                    <select
+                      value={fromWh}
+                      onChange={e => setFromWh(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    >
+                      {businessType === 'restaurant' ? (
+                        <>
+                          <option value="wh_kitchen">{isRtl ? 'مستودع المطبخ والمكونات' : 'Kitchen WH'}</option>
+                          <option value="wh_restaurant_main">{isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH'}</option>
+                        </>
+                      ) : businessType === 'pharmacy' ? (
+                        <>
+                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'المستودع الوجهة' : 'Destination Warehouse'}</label>
+                    <select
+                      value={toWh}
+                      onChange={e => setToWh(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    >
+                      {businessType === 'restaurant' ? (
+                        <>
+                          <option value="wh_restaurant_main">{isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH'}</option>
+                          <option value="wh_kitchen">{isRtl ? 'مستودع المطبخ والمكونات' : 'Kitchen WH'}</option>
+                        </>
+                      ) : businessType === 'pharmacy' ? (
+                        <>
+                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'اختر المنتج للتحويل' : 'Select Product to Transfer'}</label>
+                    <select
+                      value={transferProdId}
+                      onChange={e => setTransferProdId(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    >
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{isRtl ? p.name_ar : p.name_en}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'الكمية للتحويل' : 'Quantity'}</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={transferQty}
+                      onChange={e => setTransferQty(parseFloat(e.target.value))}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all"
                   >
-                    <option value="wh_riyadh_2">مستودع صيدلية الرياض</option>
-                    <option value="wh_riyadh_1">مستودع الرياض الأول</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-slate-500 block mb-1">اختر المنتج للتحويل</label>
-                  <select
-                    value={transferProdId}
-                    onChange={e => setTransferProdId(e.target.value)}
-                    className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
-                  >
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>{isRtl ? p.name_ar : p.name_en}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-slate-500 block mb-1">الكمية للتحويل</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={transferQty}
-                    onChange={e => setTransferQty(parseFloat(e.target.value))}
-                    className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all"
-                >
-                  إتمام تحويل الكمية
-                </button>
-              </form>
+                    {isRtl ? 'إتمام تحويل الكمية' : 'Submit Transfer'}
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         )}
 
         {activeSubTab === 'purchases' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
             {/* Suppliers list */}
             <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
@@ -792,14 +1019,15 @@ export const ERP: React.FC = () => {
                 {isRtl ? 'الموردين والشركات المسجلين' : 'ERP Suppliers'}
               </h3>
 
-              <div className="overflow-x-auto max-h-[300px]">
+              <div className="overflow-x-auto max-h-[360px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
                       <th className="py-2">{isRtl ? 'الشركة' : 'Vendor'}</th>
                       <th>{isRtl ? 'مسؤول المبيعات' : 'Contact Person'}</th>
                       <th>{isRtl ? 'الهاتف' : 'Phone'}</th>
-                      <th className="text-left">{isRtl ? 'مستحقات معلقة للمورد' : 'Balance'}</th>
+                      <th>{isRtl ? 'مستحقات معلقة للمورد' : 'Balance'}</th>
+                      <th className="text-left">{isRtl ? 'إجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -808,8 +1036,16 @@ export const ERP: React.FC = () => {
                         <td className="py-2.5 font-bold">{s.name}</td>
                         <td className="text-slate-500">{s.contact_name}</td>
                         <td className="text-slate-500 font-sans">{s.phone}</td>
-                        <td className={`text-left font-bold font-sans ${s.balance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        <td className={`font-bold font-sans ${s.balance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                           {s.balance.toFixed(2)} SAR
+                        </td>
+                        <td className="text-left py-2.5">
+                          <button
+                            onClick={() => handleDeleteSupplier(s.id)}
+                            className="p-1 text-red-500 hover:bg-red-500/10 rounded"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -818,25 +1054,101 @@ export const ERP: React.FC = () => {
               </div>
             </div>
 
-            {/* Purchase logs */}
-            <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
-              <h3 className="font-bold text-sm border-b pb-2">📋 {isRtl ? 'طلبات توريد المشتريات' : 'Purchase Orders'}</h3>
-              {purchases.length === 0 ? (
-                <div className="text-center text-xs py-8 text-slate-400">
-                  {isRtl ? 'لا توجد فواتير شراء حالية' : 'No purchase orders yet'}
-                </div>
-              ) : (
-                purchases.map(p => (
-                  <div key={p.id} className="p-3 rounded-lg border text-xs">
-                    <div className="flex justify-between mb-1">
-                      <span className="font-bold">{p.id}</span>
-                      <span className="text-slate-400">{p.created_at}</span>
-                    </div>
-                    <div>المجموع: {p.total} SAR</div>
-                    <div className="text-emerald-500 font-semibold">{p.status}</div>
+            {/* Sidebar Forms & Purchase Logs */}
+            <div className="space-y-6">
+              {/* Add Supplier Form */}
+              <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
+                <h3 className="font-bold text-sm border-b pb-2 flex items-center gap-1.5">
+                  <Plus className="h-4.5 w-4.5 text-blue-500" />
+                  {isRtl ? 'إضافة مورد جديد' : 'Add New Supplier'}
+                </h3>
+
+                <form onSubmit={handleAddSupplier} className="space-y-3.5 text-xs font-semibold">
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'اسم الشركة / المورد*' : 'Supplier / Company Name*'}</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={isRtl ? 'شركة الأغذية الحديثة' : 'Modern Food Co.'}
+                      value={supName}
+                      onChange={e => setSupName(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
                   </div>
-                ))
-              )}
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'مسؤول المبيعات' : 'Contact Person'}</label>
+                    <input
+                      type="text"
+                      placeholder="محمد حسن"
+                      value={supContact}
+                      onChange={e => setSupContact(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'رقم الهاتف' : 'Phone'}</label>
+                    <input
+                      type="text"
+                      placeholder="0112883838"
+                      value={supPhone}
+                      onChange={e => setSupPhone(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'البريد الإلكتروني' : 'Email Address'}</label>
+                    <input
+                      type="email"
+                      placeholder="supplier@mail.com"
+                      value={supEmail}
+                      onChange={e => setSupEmail(e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'الرصيد المعلق (ريال سعودي)' : 'Initial Balance (SAR)'}</label>
+                    <input
+                      type="number"
+                      placeholder="-1000"
+                      value={supBalance === 0 ? '' : supBalance}
+                      onChange={e => setSupBalance(parseFloat(e.target.value) || 0)}
+                      className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none font-sans"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all animate-pulse"
+                  >
+                    {isRtl ? 'حفظ وتثبيت المورد' : 'Add Supplier'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Purchase logs */}
+              <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
+                <h3 className="font-bold text-sm border-b pb-2">📋 {isRtl ? 'طلبات توريد المشتريات' : 'Purchase Orders'}</h3>
+                {purchases.length === 0 ? (
+                  <div className="text-center text-xs py-8 text-slate-400">
+                    {isRtl ? 'لا توجد فواتير شراء حالية' : 'No purchase orders yet'}
+                  </div>
+                ) : (
+                  purchases.map(p => (
+                    <div key={p.id} className="p-3 rounded-lg border text-xs">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-bold">{p.id}</span>
+                        <span className="text-slate-400">{p.created_at}</span>
+                      </div>
+                      <div>المجموع: {p.total} SAR</div>
+                      <div className="text-emerald-500 font-semibold">{p.status}</div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -957,7 +1269,7 @@ export const ERP: React.FC = () => {
                     className="w-full px-2 py-2 rounded-lg border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-900/50 focus:outline-none"
                   >
                     <option value="">-- اختر منتج المطعم --</option>
-                    {products.filter(p => p.category === 'Restaurant').map(p => (
+                    {products.filter(p => ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant'].includes(p.category)).map(p => (
                       <option key={p.id} value={p.id}>{isRtl ? p.name_ar : p.name_en}</option>
                     ))}
                   </select>
@@ -1792,7 +2104,15 @@ export const ERP: React.FC = () => {
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
                   >
                     {businessType === 'restaurant' && (
-                      <option value="Restaurant">{isRtl ? 'وجبات مطعم' : 'Restaurant'}</option>
+                      <>
+                        <option value="meal">{isRtl ? 'وجبة رئيسية' : 'Main Meal'}</option>
+                        <option value="sandwich">{isRtl ? 'ساندوتش' : 'Sandwich'}</option>
+                        <option value="drink">{isRtl ? 'مشروبات وعصائر' : 'Drink / Beverage'}</option>
+                        <option value="dessert">{isRtl ? 'حلويات' : 'Dessert'}</option>
+                        <option value="salad">{isRtl ? 'سلطة' : 'Salad'}</option>
+                        <option value="appetizer">{isRtl ? 'مقبلات' : 'Appetizer'}</option>
+                        <option value="raw_material">{isRtl ? 'مواد خام للمطبخ' : 'Kitchen Raw Material'}</option>
+                      </>
                     )}
                     {businessType === 'pharmacy' && (
                       <option value="Pharmacy">{isRtl ? 'صيدلية وأدوية' : 'Pharmacy'}</option>
@@ -1826,7 +2146,15 @@ export const ERP: React.FC = () => {
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
                 >
                   {businessType === 'restaurant' && (
-                    <option value="Restaurant">{isRtl ? 'وجبات مطعم' : 'Restaurant'}</option>
+                    <>
+                      <option value="meal">{isRtl ? 'وجبة رئيسية' : 'Main Meal'}</option>
+                      <option value="sandwich">{isRtl ? 'ساندوتش' : 'Sandwich'}</option>
+                      <option value="drink">{isRtl ? 'مشروبات وعصائر' : 'Drink / Beverage'}</option>
+                      <option value="dessert">{isRtl ? 'حلويات' : 'Dessert'}</option>
+                      <option value="salad">{isRtl ? 'سلطة' : 'Salad'}</option>
+                      <option value="appetizer">{isRtl ? 'مقبلات' : 'Appetizer'}</option>
+                      <option value="raw_material">{isRtl ? 'مواد خام للمطبخ' : 'Kitchen Raw Material'}</option>
+                    </>
                   )}
                   {businessType === 'pharmacy' && (
                     <option value="Pharmacy">{isRtl ? 'صيدلية وأدوية' : 'Pharmacy'}</option>

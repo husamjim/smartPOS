@@ -192,7 +192,15 @@ export default function App() {
         <LandingPage 
           language={language} 
           changeLanguage={changeLanguage} 
-          onNavigate={(view) => setLandingView(view)} 
+          onNavigate={(view) => {
+            if (view === 'demo') {
+              loginUser('owner', 'owner123');
+              setBusinessType(null);
+              setLandingView('landing');
+            } else {
+              setLandingView(view);
+            }
+          }} 
         />
       );
     }

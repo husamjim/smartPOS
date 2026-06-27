@@ -43,13 +43,22 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { selectedBranch, isOnline, taxPercentage } = useApp();
+  const { selectedBranch, isOnline, taxPercentage, businessType } = useApp();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<LocalCustomer | undefined>(undefined);
   const [couponCode, setCouponCode] = useState<string>('');
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
   const [suspendedList, setSuspendedList] = useState<any[]>([]);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+
+  // Clear cart when business sector changes to prevent cross-leakage
+  useEffect(() => {
+    setCartItems([]);
+    setSelectedCustomer(undefined);
+    setCouponCode('');
+    setCouponDiscount(0);
+    setReceiptPreview(null);
+  }, [businessType]);
 
   // Totals
   const [subtotal, setSubtotal] = useState<number>(0);
