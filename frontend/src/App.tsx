@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from './context/AppContext';
 import { useCart } from './context/CartContext';
-import { Dashboard } from './pages/Dashboard';
-import { POS } from './pages/POS';
-import { ERP } from './pages/ERP';
-import { CRM } from './pages/CRM';
-import { Kitchen } from './pages/Kitchen';
-import { Reports } from './pages/Reports';
-import { Settings } from './pages/Settings';
-import { AIAssistant } from './pages/AIAssistant';
-import { LandingPage } from './pages/LandingPage';
+// React.lazy dynamic code-splitting imports for all heavy ERP & POS pages
+const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const POS = React.lazy(() => import('./pages/POS').then(m => ({ default: m.POS })));
+const ERP = React.lazy(() => import('./pages/ERP').then(m => ({ default: m.ERP })));
+const CRM = React.lazy(() => import('./pages/CRM').then(m => ({ default: m.CRM })));
+const Kitchen = React.lazy(() => import('./pages/Kitchen').then(m => ({ default: m.Kitchen })));
+const Reports = React.lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
+const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
+const AIAssistant = React.lazy(() => import('./pages/AIAssistant').then(m => ({ default: m.AIAssistant })));
+const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 import { BusinessSelector } from './components/shared/BusinessSelector';
 import { HardwareService } from './services/hardware';
 
@@ -639,14 +640,21 @@ export default function App() {
 
         {/* Content Router frame */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'pos' && <POS />}
-          {activeTab === 'erp' && <ERP />}
-          {activeTab === 'crm' && <CRM />}
-          {activeTab === 'kds' && <Kitchen />}
-          {activeTab === 'reports' && <Reports />}
-          {activeTab === 'ai_assistant' && <AIAssistant />}
-          {activeTab === 'settings' && <Settings />}
+          <React.Suspense fallback={
+            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+              <div className="h-10 w-10 rounded-full border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent animate-spin"></div>
+              <p className="text-xs font-bold text-slate-400">جاري تحميل الصفحة...</p>
+            </div>
+          }>
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'pos' && <POS />}
+            {activeTab === 'erp' && <ERP />}
+            {activeTab === 'crm' && <CRM />}
+            {activeTab === 'kds' && <Kitchen />}
+            {activeTab === 'reports' && <Reports />}
+            {activeTab === 'ai_assistant' && <AIAssistant />}
+            {activeTab === 'settings' && <Settings />}
+          </React.Suspense>
         </main>
       </div>
 

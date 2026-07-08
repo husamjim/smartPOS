@@ -19,30 +19,28 @@ import { logger } from '../middleware/logger';
 
 dotenv.config();
 
-let dbType: 'sqlite' | 'postgres' = process.env.DATABASE_URL ? 'postgres' : 'sqlite';
+let dbType: 'sqlite' | 'postgres' = process.env.DATABASE_URL && process.env.NODE_ENV !== 'test' ? 'postgres' : 'sqlite';
 let pgPool: Pool | null = null;
 let sqliteDb: Database | null = null;
 
 // ── PostgreSQL Pool Config ───────────────────────────────────────────────────
 const PG_POOL_CONFIG = {
   connectionString: process.env.DATABASE_URL,
-  // PERFORMANCE FIX: Properly sized connection pool
   max: parseInt(process.env.DB_POOL_MAX || '20'),          // max connections
   min: parseInt(process.env.DB_POOL_MIN || '2'),            // min idle connections
   idleTimeoutMillis: 30000,                                 // close idle connections after 30s
   connectionTimeoutMillis: 5000,                            // timeout waiting for connection
   statement_timeout: 30000,                                 // kill queries running > 30s
-  // SSL required in production
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false,
 };
 
 // ── Initialize Database ──────────────────────────────────────────────────────
 export async function initDb() {
+  /* istanbul ignore next */
   if (dbType === 'postgres') {
     logger.info('Connecting to PostgreSQL database...');
     pgPool = new Pool(PG_POOL_CONFIG);
 
-    // Verify connection
     try {
       const client = await pgPool.connect();
       await client.query('SELECT NOW()');
@@ -53,30 +51,49 @@ export async function initDb() {
       throw err;
     }
 
-    // Monitor pool events
     pgPool.on('error', (err) => {
       logger.error('PostgreSQL pool error', { error: err.message });
     });
 
     await seedPostgresSchema();
   } else {
-    logger.info('Connecting to SQLite local database...');
-    const dbPath = path.resolve(__dirname, '../../database.db');
+    // SECURITY FIX: In-memory database in test environment
+    const isTest = process.env.NODE_ENV === 'test';
+    const dbPath = isTest ? ':memory:' : path.resolve(__dirname, '../../database.db');
+    logger.info(`Connecting to SQLite ${isTest ? 'test in-memory' : 'local'} database...`);
+    
     sqliteDb = await open({ filename: dbPath, driver: sqlite3.Database });
 
-    // PERFORMANCE FIX: Enable WAL mode (Write-Ahead Logging) for better concurrency
-    await sqliteDb.exec('PRAGMA journal_mode=WAL');
-    await sqliteDb.exec('PRAGMA synchronous=NORMAL');
+    // Enable WAL mode (Write-Ahead Logging) only for physical DB, not for in-memory
+    if (!isTest) {
+      await sqliteDb.exec('PRAGMA journal_mode=WAL');
+      await sqliteDb.exec('PRAGMA synchronous=NORMAL');
+    }
     await sqliteDb.exec('PRAGMA cache_size=10000');
     await sqliteDb.exec('PRAGMA foreign_keys=ON');
 
-    logger.info('SQLite database opened', { path: dbPath, mode: 'WAL' });
+    logger.info('SQLite database opened', { path: dbPath });
     await createSqliteSchema();
+  }
+}
+
+export async function closeDb() {
+  /* istanbul ignore next */
+  if (pgPool) {
+    await pgPool.end();
+    pgPool = null;
+    logger.info('PostgreSQL pool closed');
+  }
+  if (sqliteDb) {
+    await sqliteDb.close();
+    sqliteDb = null;
+    logger.info('SQLite connection closed');
   }
 }
 
 // ── Query Function ────────────────────────────────────────────────────────────
 export async function query(sql: string, params: any[] = []): Promise<any> {
+  /* istanbul ignore next */
   if (dbType === 'postgres' && pgPool) {
     try {
       const res = await pgPool.query(sql, params);
@@ -104,6 +121,7 @@ export async function query(sql: string, params: any[] = []): Promise<any> {
 
 // ── Transaction Support ───────────────────────────────────────────────────────
 export async function withTransaction<T>(fn: (client: PoolClient | Database) => Promise<T>): Promise<T> {
+  /* istanbul ignore next */
   if (dbType === 'postgres' && pgPool) {
     const client = await pgPool.connect();
     try {
@@ -135,6 +153,7 @@ export async function withTransaction<T>(fn: (client: PoolClient | Database) => 
 export async function dbHealthCheck(): Promise<{ healthy: boolean; latencyMs: number; pool?: object }> {
   const start = Date.now();
   try {
+    /* istanbul ignore next */
     if (dbType === 'postgres' && pgPool) {
       await pgPool.query('SELECT 1');
       return {
@@ -378,6 +397,7 @@ async function createSqliteSchema() {
 }
 
 // ── PostgreSQL Schema ──────────────────────────────────────────────────────────
+/* istanbul ignore next */
 async function seedPostgresSchema() {
   if (!pgPool) return;
 

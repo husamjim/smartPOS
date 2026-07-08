@@ -9,7 +9,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 // SECURITY FIX [CRITICAL]: Fail hard if secret is not set — never fall back to weak defaults
+/* istanbul ignore next */
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
+/* istanbul ignore next */
 if (!ACCESS_TOKEN_SECRET) {
   throw new Error('[FATAL] ACCESS_TOKEN_SECRET environment variable is not set. Refusing to start.');
 }

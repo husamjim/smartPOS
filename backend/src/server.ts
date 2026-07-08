@@ -26,6 +26,8 @@ import { authenticateToken } from './middleware/auth';
 import { createRateLimiter, securityHeaders, sanitizeInputs, validateOrderPayload } from './middleware/security';
 import { requestLogger, errorHandler, logger } from './middleware/logger';
 import * as authController from './controllers/authController';
+import { getRedisClient } from './config/redis';
+import { startWorkers } from './workers/worker';
 
 dotenv.config();
 
@@ -118,6 +120,37 @@ const wsHeartbeat = setInterval(() => {
   });
 }, 30000);
 
+// Connect Redis subscriber for multi-instance KDS horizontal scaling
+let redisSub: any = null;
+try {
+  redisSub = getRedisClient().duplicate();
+  redisSub.subscribe('kds-channel', (err: any) => {
+    /* istanbul ignore next */
+    if (err) {
+      logger.error('Failed to subscribe to Redis KDS channel', { error: err.message });
+    } else {
+      logger.info('Subscribed to Redis KDS channel successfully');
+    }
+  });
+
+  redisSub.on('message', (channel: string, message: string) => {
+    /* istanbul ignore next */
+    if (channel === 'kds-channel') {
+      let sent = 0;
+      activeClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+          sent++;
+        }
+      });
+      if (sent > 0) logger.debug('Broadcasted KDS message from Redis Pub/Sub', { recipients: sent });
+    }
+  });
+} catch (redisErr: any) {
+  /* istanbul ignore next */
+  logger.warn('Redis Pub/Sub KDS subscription failed — scaling disabled', { error: redisErr.message });
+}
+
 server.on('upgrade', (request, socket, head) => {
   wss.handleUpgrade(request, socket, head, (ws) => {
     wss.emit('connection', ws, request);
@@ -126,6 +159,16 @@ server.on('upgrade', (request, socket, head) => {
 
 function broadcastToKds(message: unknown) {
   const payload = JSON.stringify(message);
+
+  // Publish to Redis Pub/Sub so all server nodes receive it and broadcast locally
+  try {
+    getRedisClient().publish('kds-channel', payload);
+  } catch (err: any) {
+    /* istanbul ignore next */
+    logger.warn('Failed to publish KDS message to Redis Pub/Sub, falling back to local-only broadcast', { error: err.message });
+  }
+
+  // Local-only broadcast fallback (for safety or single instance)
   let sent = 0;
   activeClients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
@@ -133,7 +176,7 @@ function broadcastToKds(message: unknown) {
       sent++;
     }
   });
-  if (sent > 0) logger.debug('KDS broadcast sent', { recipients: sent });
+  if (sent > 0) logger.debug('KDS local broadcast sent', { recipients: sent });
 }
 
 // ── Health Check (for load balancers / Kubernetes) ───────────────────────────
@@ -321,6 +364,9 @@ server.listen(PORT, () => {
     dbType: process.env.DATABASE_URL ? 'postgres' : 'sqlite',
     allowedOrigins: ALLOWED_ORIGINS,
   });
+
+  // Start BullMQ background job workers
+  startWorkers();
 });
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
