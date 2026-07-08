@@ -85,7 +85,7 @@ export const Dashboard: React.FC = () => {
         }
       } else {
         // Standard items
-        const qty = p.stock !== undefined ? p.stock : 8; // fallback mock stock
+        const qty = p.stock !== undefined ? p.stock : 0; // standard zero default stock
         if (qty <= p.min_stock) {
           lowStockCount++;
           itemsWithWarnings.push({ 
@@ -98,10 +98,10 @@ export const Dashboard: React.FC = () => {
     }
 
     setStats({
-      salesToday: parseFloat(salesToday.toFixed(2)) || 1420.50, // mock fallback if empty
-      ordersCount: todayOrders.length || 18,
-      customersCount: customersCount || 3,
-      lowStockCount: lowStockCount || 2
+      salesToday: parseFloat(salesToday.toFixed(2)),
+      ordersCount: todayOrders.length,
+      customersCount: customersCount,
+      lowStockCount: lowStockCount
     });
 
     setCriticalItems(itemsWithWarnings.slice(0, 5));

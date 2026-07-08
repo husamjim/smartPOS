@@ -5,7 +5,7 @@ import {
   Shirt, 
   Ship, 
   Warehouse, 
-  Sparkles, 
+  Sparkles,
   Globe, 
   Lock, 
   UserPlus, 
@@ -49,7 +49,7 @@ const translations: Record<string, any> = {
     secureTitle: "أمان واستقرار فائق",
     secureDesc: "تشفير كامل للبيانات، إدارة صلاحيات دقيقة للموظفين، وحفظ احتياطي دوري.",
     tagline: "النظام الذكي المتكامل للبيع وإدارة الموارد",
-    demoBtn: "🔥 تجربة ديمو سريعة"
+    demoBtn: "تجربة ديمو سريعة"
   },
   en: {
     heroTitle: "Intelligent Cashier POS & Full ERP System",
@@ -79,7 +79,7 @@ const translations: Record<string, any> = {
     secureTitle: "Premium Security & Speed",
     secureDesc: "End-to-end local data encryption, granular employee permissions, and scheduled backups.",
     tagline: "Integrated POS/ERP for Smart Businesses",
-    demoBtn: "🔥 Try Quick Demo"
+    demoBtn: "Try Quick Demo"
   },
   fr: {
     heroTitle: "Système Intelligent POS de Caisse et ERP Complet",
@@ -109,7 +109,7 @@ const translations: Record<string, any> = {
     secureTitle: "Sécurité & Stabilité Premium",
     secureDesc: "Chiffrement des données locales, autorisations des employés et sauvegardes régulières.",
     tagline: "Système POS/ERP Intégré pour Entreprises Intelligentes",
-    demoBtn: "🔥 Démo Rapide"
+    demoBtn: "Démo Rapide"
   },
   de: {
     heroTitle: "Intelligentes Kassensystem (POS) & Komplettes ERP",
@@ -139,7 +139,7 @@ const translations: Record<string, any> = {
     secureTitle: "Premium-Sicherheit & Stabilität",
     secureDesc: "Lokale Datenverschlüsselung, granulare Benutzerrechte und regelmäßige Backups.",
     tagline: "Integriertes POS/ERP für intelligente Unternehmen",
-    demoBtn: "🔥 Kassendemo"
+    demoBtn: "Kassendemo"
   },
   zh: {
     heroTitle: "智能收银 POS 兼一体化 ERP 系统",
@@ -169,7 +169,7 @@ const translations: Record<string, any> = {
     secureTitle: "安全保障与稳定性",
     secureDesc: "端到端本地 data 加密、细粒度的员工权限管理以及定期自动备份。",
     tagline: "智能商户一体化收银 POS/ERP 系统",
-    demoBtn: "🔥 快速演示模式"
+    demoBtn: "快速演示模式"
   }
 };
 
@@ -224,7 +224,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ language, changeLangua
             onClick={() => onNavigate('demo')}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-orange-400 border border-orange-500/20 text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
           >
-            <Sparkles className="h-3.5 w-3.5" />
             <span>{isRtl ? 'ديمو' : 'Demo'}</span>
           </button>
 
@@ -270,7 +269,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ language, changeLangua
               onClick={() => onNavigate('demo')}
               className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-sm shadow-lg shadow-orange-950/35 transition-all flex items-center justify-center gap-2 font-sans border-none"
             >
-              <Sparkles className="h-4.5 w-4.5 animate-pulse" />
               <span>{t.demoBtn}</span>
             </button>
 

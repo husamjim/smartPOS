@@ -29,7 +29,7 @@ export const Reports: React.FC = () => {
     revenue: 0,
     cogs: 0,
     grossProfit: 0,
-    expenses: 450, // mock base salary/rent expenses
+    expenses: 0, // zero default expenses
     netProfit: 0,
     cashAsset: 0,
     inventoryAsset: 0,
@@ -54,12 +54,7 @@ export const Reports: React.FC = () => {
 
     const computedLedger: LedgerEntry[] = [];
 
-    // Base mock ledger entries (capital injection, supplier purchases)
-    computedLedger.push(
-      { date: '2026-06-01T09:00:00Z', desc: 'راس مال البداية (Capital)', debitAccount: 'النقدية (Cash)', creditAccount: 'رأس المال (Equity)', amount: 50000 },
-      { date: '2026-06-02T11:00:00Z', desc: 'شراء مخزون ابتدائي (Inventory)', debitAccount: 'المخزون (Inventory)', creditAccount: 'النقدية (Cash)', amount: 12000 },
-      { date: '2026-06-10T14:30:00Z', desc: 'دفع مصروف إيجار (Rent)', debitAccount: 'مصاريف عمومية (Expenses)', creditAccount: 'النقدية (Cash)', amount: 450 }
-    );
+    // Base ledger entries (start empty)
 
     // Sum orders
     orders.forEach(o => {
@@ -99,20 +94,13 @@ export const Reports: React.FC = () => {
       }
     });
 
-    // Fallbacks if database is brand new and empty to display realistic financial shapes
-    if (totalRevenue === 0) {
-      totalRevenue = 3150;
-      totalTax = 472.5;
-      totalCogs = 1920;
-    }
-
     const grossProfit = totalRevenue - totalCogs;
-    const expenses = 450; // Operating expenses
+    const expenses = 0; // Operating expenses
     const netProfit = grossProfit - expenses;
 
     // Balance Sheet assets
-    const cashAsset = 50000 + (totalRevenue + totalTax) - 12000 - expenses;
-    const inventoryAsset = 12000 - totalCogs;
+    const cashAsset = (totalRevenue + totalTax) - expenses;
+    const inventoryAsset = 0 - totalCogs;
 
     setFinance({
       revenue: parseFloat(totalRevenue.toFixed(2)),
@@ -146,12 +134,7 @@ export const Reports: React.FC = () => {
       grouped[day].taxAmount += o.tax;
     });
 
-    if (Object.keys(grouped).length === 0) {
-      const mockDays = [vatDateFrom, vatDateTo].filter((v, i, a) => a.indexOf(v) === i);
-      mockDays.forEach(day => {
-        grouped[day] = { invoiceCount: 5, grossSales: 2300, taxAmount: 300 };
-      });
-    }
+    // No fallback mock rows for VAT report
 
     const rows = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([date, data]) => ({
       date,

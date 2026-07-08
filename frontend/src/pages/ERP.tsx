@@ -185,14 +185,6 @@ export const ERP: React.FC = () => {
     }
 
     if (activeSubTab === 'purchases') {
-      const s = await db.suppliers.toArray();
-      if (s.length === 0) {
-        // Seed initial suppliers
-        await db.suppliers.bulkAdd([
-          { id: 's_1', name: 'شركة الأغذية المتحدة', contact_name: 'سليمان خالد', phone: '0114992929', email: 'supplier@food.com', balance: -1500 },
-          { id: 's_2', name: 'مزارع الجوف الزراعية', contact_name: 'فهد العاصم', phone: '0142999121', email: 'aljouf@farm.com', balance: 0 }
-        ]);
-      }
       setSuppliers(await db.suppliers.toArray());
       setPurchases(await db.purchaseOrders.toArray());
     }
