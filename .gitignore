@@ -40,4 +40,13 @@ media__*/
 backend/database.db
 
 .vercel
-.env*
+
+# Environment files — NEVER commit actual secrets
+.env
+.env.local
+.env.production
+.env.development
+backend/.env
+# Allow example templates
+!.env.example
+!backend/.env.example

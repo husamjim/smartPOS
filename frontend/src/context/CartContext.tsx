@@ -185,8 +185,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const suspendOrder = async () => {
     if (cartItems.length === 0) return;
-    const suspendedId = 'susp_' + Math.random().toString(36).substr(2, 9);
-    const invoiceNum = 'SUSP-' + Math.floor(1000 + Math.random() * 9000);
+    // SECURITY FIX: Use crypto.randomUUID instead of Math.random
+    const suspendedId = 'susp_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+    const invoiceNum = 'SUSP-' + Date.now();
     
     await db.suspendedOrders.add({
       id: suspendedId,
@@ -217,20 +218,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     splitDetails?: { cash: number; card: number; bank: number },
     customInvoiceNum?: string
   ) => {
-    const orderId = 'ord_' + Math.random().toString(36).substr(2, 9);
+    // PERFORMANCE FIX: Single Dexie transaction for atomic checkout
+    // SECURITY FIX: Use crypto.randomUUID instead of Math.random
+    const orderId = 'ord_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
     const dateStr = new Date().toISOString();
-    const invoiceNum = customInvoiceNum || 'INV-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(1000 + Math.random() * 9000);
+    const invoiceNum = customInvoiceNum || 'INV-' + dateStr.slice(0,10).replace(/-/g,'') + '-' + Date.now().toString().slice(-5);
 
     const newOrder: LocalOrder = {
       id: orderId,
       invoice_number: invoiceNum,
       branch_id: selectedBranch.id,
       customer_id: selectedCustomer?.id,
-      user_id: 'u_default_admin', // Default mock session admin
+      user_id: sessionStorage.getItem('pos_user_id') || 'u_unknown',
       total: parseFloat(totalAmount.toFixed(2)),
       tax: parseFloat(taxAmount.toFixed(2)),
       discount: parseFloat(discountAmount.toFixed(2)),
-      payment_status: 'paid', // simplify: mock as paid
+      payment_status: 'paid',
       payment_method: paymentMethod,
       split_details: splitDetails ? JSON.stringify(splitDetails) : undefined,
       status: 'completed',
@@ -238,65 +241,80 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       created_at: dateStr
     };
 
-    // Add to Local DB
-    await db.orders.add(newOrder);
+    // PERFORMANCE FIX: Wrap everything in a single Dexie transaction
+    // This replaces 5N separate DB operations with one atomic commit
+    await db.transaction('rw', [db.orders, db.orderItems, db.batches, db.products, db.customers, db.offlineQueue], async () => {
+      // 1. Add order
+      await db.orders.add(newOrder);
 
-    // Save order items & decrement stock / batches
-    for (const item of cartItems) {
-      const orderItemId = 'item_' + Math.random().toString(36).substr(2, 9);
-      const newOrderItem: LocalOrderItem = {
-        id: orderItemId,
+      // 2. Build all order items at once
+      const orderItemsToAdd: LocalOrderItem[] = cartItems.map(item => ({
+        id: 'item_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12),
         order_id: orderId,
         product_id: item.product.id,
         batch_id: item.selectedBatch?.id,
         quantity: item.quantity,
         price: item.product.price,
         discount: item.discountPercentage || 0
-      };
-      await db.orderItems.add(newOrderItem);
+      }));
 
-      // Decrement Batch stock if batch is selected
-      if (item.selectedBatch) {
-        const currentBatch = await db.batches.get(item.selectedBatch.id);
-        if (currentBatch) {
-          const newQty = Math.max(0, currentBatch.quantity - item.quantity);
-          await db.batches.update(item.selectedBatch.id, { quantity: newQty });
+      // 3. BulkAdd all items in one operation
+      await db.orderItems.bulkAdd(orderItemsToAdd);
+
+      // 4. Fetch all affected batches and products in parallel (not N+1 sequential)
+      const batchIds = cartItems.filter(i => i.selectedBatch?.id).map(i => i.selectedBatch!.id);
+      const productIds = cartItems.map(i => i.product.id);
+
+      const [batches, products] = await Promise.all([
+        batchIds.length > 0 ? db.batches.bulkGet(batchIds) : Promise.resolve([]),
+        db.products.bulkGet(productIds),
+      ]);
+
+      // 5. Compute batch/product updates and apply
+      const batchUpdates: Promise<any>[] = [];
+      const productUpdates: Promise<any>[] = [];
+
+      for (const item of cartItems) {
+        if (item.selectedBatch) {
+          const batch = batches.find(b => b?.id === item.selectedBatch!.id);
+          if (batch) {
+            batchUpdates.push(
+              db.batches.update(batch.id, { quantity: Math.max(0, batch.quantity - item.quantity) })
+            );
+          }
+        }
+        const prod = products.find(p => p?.id === item.product.id);
+        if (prod && prod.stock !== undefined) {
+          productUpdates.push(
+            db.products.update(prod.id, { stock: Math.max(0, (prod.stock || 0) - item.quantity) })
+          );
         }
       }
-      
-      // Update global product stock cache
-      const localProd = await db.products.get(item.product.id);
-      if (localProd && localProd.stock !== undefined) {
-        const newStock = Math.max(0, localProd.stock - item.quantity);
-        await db.products.update(item.product.id, { stock: newStock });
+
+      // 6. Run all updates in parallel within the same transaction
+      await Promise.all([...batchUpdates, ...productUpdates]);
+
+      // 7. Update loyalty points
+      if (selectedCustomer) {
+        const earnedPoints = Math.floor(totalAmount / 10);
+        const updatedPoints = (selectedCustomer.points || 0) + earnedPoints;
+        let newTier = selectedCustomer.tier;
+        if (updatedPoints >= 300) newTier = 'platinum';
+        else if (updatedPoints >= 150) newTier = 'gold';
+        await db.customers.update(selectedCustomer.id, { points: updatedPoints, tier: newTier });
       }
-    }
 
-    // Allocate loyalty points: 1 point per 10 SAR spent
-    if (selectedCustomer) {
-      const earnedPoints = Math.floor(totalAmount / 10);
-      const updatedPoints = selectedCustomer.points + earnedPoints;
-      
-      // Upgrade tiers depending on points
-      let newTier = selectedCustomer.tier;
-      if (updatedPoints >= 300) newTier = 'platinum';
-      else if (updatedPoints >= 150) newTier = 'gold';
-
-      await db.customers.update(selectedCustomer.id, {
-        points: updatedPoints,
-        tier: newTier
-      });
-    }
-
-    // Push into sync queue if offline
-    if (!isOnline) {
-      await db.offlineQueue.add({
-        action: 'CREATE',
-        table: 'orders',
-        payload: newOrder,
-        timestamp: dateStr
-      });
-    }
+      // 8. Add to offline queue if offline
+      if (!isOnline) {
+        await db.offlineQueue.add({
+          action: 'CREATE',
+          table: 'orders',
+          payload: newOrder,
+          timestamp: dateStr,
+          retryCount: 0
+        });
+      }
+    });
 
     // Generate thermal receipt HTML
     const arDir = document.documentElement.dir === 'rtl';
