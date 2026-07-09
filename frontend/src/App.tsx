@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from './context/AppContext';
 import { useCart } from './context/CartContext';
+import { telemetry } from './utils/telemetry';
 // React.lazy dynamic code-splitting imports for all heavy ERP & POS pages
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const POS = React.lazy(() => import('./pages/POS').then(m => ({ default: m.POS })));
@@ -100,6 +101,33 @@ export default function App() {
 
   // Derive RTL flag - always computed regardless of render path
   const isRtl = language === 'ar';
+
+  // Native Splash Screen states
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashFade, setSplashFade] = useState(false);
+
+  useEffect(() => {
+    // Record react loaded time
+    telemetry.reactLoaded = Date.now();
+
+    const timer = setTimeout(() => {
+      if (!telemetry.dbInitialized || telemetry.dbInitialized === telemetry.bootStart) {
+        telemetry.dbInitialized = Date.now();
+      }
+      telemetry.loginRendered = Date.now();
+      telemetry.printProfile();
+
+      // Trigger fade out transition
+      setSplashFade(true);
+      const fadeTimer = setTimeout(() => {
+        setShowSplash(false);
+      }, 500);
+
+      return () => clearTimeout(fadeTimer);
+    }, 1500); // 1.5s splash visibility for premium feel
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Reset tab if businessType switches and hides KDS
   useEffect(() => {
@@ -200,6 +228,41 @@ export default function App() {
       }, 1500);
     }, 1200);
   };
+
+  if (showSplash) {
+    return (
+      <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#090d16] text-white font-sans transition-opacity duration-500 ${splashFade ? 'opacity-0' : 'opacity-100'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        {/* Elegant Glowing Spheres */}
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+
+        <div className="text-center space-y-6 max-w-sm w-full px-6">
+          <div className="relative animate-pulse">
+            <img src="/logo.png" alt="smartPOS" className="h-28 mx-auto object-contain filter drop-shadow-[0_0_20px_rgba(59,130,246,0.35)]" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-black bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 bg-clip-text text-transparent tracking-wide">
+              {isRtl ? 'سمارت POS' : 'smart POS'}
+            </h1>
+            <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase">
+              {isRtl ? 'نظام إدارة المبيعات والمخازن الذكي' : 'Native Enterprise POS & ERP'}
+            </p>
+          </div>
+
+          {/* Elegant Progress Bar */}
+          <div className="relative h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 rounded-full animate-progress" />
+          </div>
+
+          <div className="flex justify-between items-center text-[9px] text-slate-500 font-mono px-1">
+            <span>{isRtl ? 'جاري تهيئة قاعدة البيانات والواجهات...' : 'Initializing DB & modules...'}</span>
+            <span>v1.0.1</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showWelcome) {
     return (

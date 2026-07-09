@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Info, Copy, Check, Award, ShieldCheck } from 'lucide-react';
 import { AuditLogger } from '../../utils/auditLogger';
+import { telemetry } from '../../utils/telemetry';
 
 export const AboutSystem: React.FC = () => {
   const [copied, setCopied] = useState(false);
@@ -124,6 +125,71 @@ Copyright: ${specs.copyright}
               <p className="text-[10px] text-slate-400 leading-relaxed">{lib.desc}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Startup Profiling Report */}
+      <div className="glass-card p-6 rounded-3xl border border-slate-200/40 dark:border-slate-800/40 space-y-4">
+        <div className="flex items-center gap-2 border-b pb-2">
+          <Info className="h-5 w-5 text-emerald-500" />
+          <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-200">
+            {isRtl ? 'تشخيصات سرعة الإقلاع (Startup Profile)' : 'Startup Speed Diagnostics'}
+          </h4>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-semibold">
+          <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
+            <span className="text-[10px] text-slate-400 block">{isRtl ? 'إقلاع محرك Electron' : 'Electron Started'}</span>
+            <span className="text-lg font-black font-mono text-blue-500">{telemetry.getTimeline().electronReady}ms</span>
+            <p className="text-[9px] text-slate-450 leading-relaxed">
+              {isRtl ? 'زمن تشغيل كود Main Process وتهيئة الملحقات.' : 'Main process boot and context initialization.'}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
+            <span className="text-[10px] text-slate-400 block">{isRtl ? 'إنشاء النافذة الرسومية' : 'Window Creation'}</span>
+            <span className="text-lg font-black font-mono text-cyan-500">{telemetry.getTimeline().windowCreation}ms</span>
+            <p className="text-[9px] text-slate-450 leading-relaxed">
+              {isRtl ? 'زمن تهيئة نافذة Chromium وفك حزمة الأصول.' : 'Chromium BrowserWindow instantiation.'}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
+            <span className="text-[10px] text-slate-400 block">{isRtl ? 'تهيئة قاعدة البيانات' : 'Database Initialization'}</span>
+            <span className="text-lg font-black font-mono text-emerald-500">{telemetry.getTimeline().dbInit}ms</span>
+            <p className="text-[9px] text-slate-450 leading-relaxed">
+              {isRtl ? 'زمن فتح قاعدة بيانات IndexedDB والتحقق من الهجرة.' : 'IndexedDB connection and migration check.'}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
+            <span className="text-[10px] text-slate-400 block">{isRtl ? 'تحميل بيئة React' : 'React Bootstrap'}</span>
+            <span className="text-lg font-black font-mono text-purple-500">{telemetry.getTimeline().reactLoad}ms</span>
+            <p className="text-[9px] text-slate-450 leading-relaxed">
+              {isRtl ? 'زمن فك تشغيل الكود المصدري وتجميع المكونات.' : 'Mounting virtual DOM and resolving assets.'}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
+            <span className="text-[10px] text-slate-400 block">{isRtl ? 'رسم واجهة الدخول' : 'First Interactive'}</span>
+            <span className="text-lg font-black font-mono text-indigo-500">{telemetry.getTimeline().loginRender}ms</span>
+            <p className="text-[9px] text-slate-450 leading-relaxed">
+              {isRtl ? 'زمن فك تشفير شاشة الدخول وتجهيز المدخلات.' : 'Drawing login inputs and styling layers.'}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
+            <span className="text-[10px] text-slate-400 block">{isRtl ? 'تحميل لوحة التحكم المالي' : 'Dashboard Load'}</span>
+            <span className="text-lg font-black font-mono text-amber-500">{isRtl ? 'في الخلفية' : 'Background'}</span>
+            <p className="text-[9px] text-slate-450 leading-relaxed">
+              {isRtl ? 'مؤجل بالكامل ليعمل في الخلفية (Lazy) دون تعطيل الإقلاع.' : 'Fully deferred to load lazily after first paint.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex justify-between items-center">
+          <span>{isRtl ? '🚀 إجمالي زمن الإقلاع الحقيقي (Native Boot Time):' : '🚀 Total Native Boot Time:'}</span>
+          <span className="font-mono text-sm font-black">{telemetry.getTimeline().totalBoot}ms</span>
         </div>
       </div>
 

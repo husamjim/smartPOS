@@ -18,6 +18,10 @@ export const CRM: React.FC = () => {
   const [selectedCust, setSelectedCust] = useState<LocalCustomer | null>(null);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
 
+  // Client-side pagination states for native performance
+  const [customersPage, setCustomersPage] = useState(1);
+  const customersPerPage = 10;
+
   // Modals / Communication forms
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCustName, setNewCustName] = useState('');
@@ -36,6 +40,10 @@ export const CRM: React.FC = () => {
   useEffect(() => {
     loadCustomers();
   }, []);
+
+  useEffect(() => {
+    setCustomersPage(1);
+  }, [searchQuery]);
 
   const loadCustomers = async () => {
     const data = await db.customers.toArray();
@@ -102,6 +110,9 @@ export const CRM: React.FC = () => {
     c.phone.includes(searchQuery)
   );
 
+  const totalCustomersPages = Math.max(1, Math.ceil(filteredCustomers.length / customersPerPage));
+  const paginatedCustomers = filteredCustomers.slice((customersPage - 1) * customersPerPage, customersPage * customersPerPage);
+
   const isRtl = document.documentElement.dir === 'rtl';
 
   return (
@@ -147,7 +158,7 @@ export const CRM: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map(c => (
+                {paginatedCustomers.map(c => (
                   <tr
                     key={c.id}
                     onClick={() => handleSelectCustomer(c)}
@@ -170,6 +181,29 @@ export const CRM: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Client-side pagination controls */}
+          {totalCustomersPages > 1 && (
+            <div className="flex justify-between items-center px-4 py-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-xs select-none">
+              <button
+                onClick={() => setCustomersPage(prev => Math.max(1, prev - 1))}
+                disabled={customersPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
+              >
+                {isRtl ? 'السابق' : 'Previous'}
+              </button>
+              <span className="font-bold text-slate-500">
+                {isRtl ? `الصفحة ${customersPage} من ${totalCustomersPages}` : `Page ${customersPage} of ${totalCustomersPages}`}
+              </span>
+              <button
+                onClick={() => setCustomersPage(prev => Math.min(totalCustomersPages, prev + 1))}
+                disabled={customersPage === totalCustomersPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
+              >
+                {isRtl ? 'التالي' : 'Next'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

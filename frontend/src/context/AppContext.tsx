@@ -219,9 +219,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Effects ──────────────────────────────────────────────────────────────
 
-  // PERFORMANCE FIX: Run seedLocalDbIfEmpty ONCE on mount only — NOT on every theme change
+  // PERFORMANCE FIX: Run seedLocalDbIfEmpty ONCE on mount in a non-blocking queue to accelerate first paint
   useEffect(() => {
-    seedLocalDbIfEmpty();
+    const timer = setTimeout(() => {
+      seedLocalDbIfEmpty();
+    }, 200);
+    return () => clearTimeout(timer);
   }, []); // Empty dep array = once on mount
 
   // Theme effect — separate from seeding

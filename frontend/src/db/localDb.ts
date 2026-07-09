@@ -11,6 +11,8 @@
  */
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
+import { telemetry } from '../utils/telemetry';
+telemetry.dbStart = Date.now();
 
 export interface LocalProduct {
   id: string;
@@ -288,6 +290,9 @@ export async function getNextInvoiceNumber(prefix = 'INV'): Promise<string> {
 
 // ── Seed/Migration function ───────────────────────────────────────────────────
 export async function seedLocalDbIfEmpty() {
+  if (!telemetry.dbStart || telemetry.dbStart === telemetry.bootStart) {
+    telemetry.dbStart = Date.now();
+  }
   // PERFORMANCE FIX: Only run once on mount, not on every theme change
   // Migrate any legacy 'Restaurant' category products to detailed subcategories
   const restaurantProducts = await db.products.where('category').equals('Restaurant').toArray();
@@ -299,6 +304,7 @@ export async function seedLocalDbIfEmpty() {
       }
     });
   }
+  telemetry.dbInitialized = Date.now();
 }
 
 export async function seedLocalDbOptional() {

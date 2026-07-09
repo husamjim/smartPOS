@@ -11,11 +11,17 @@ export const NotificationBell: React.FC = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Check low stock on load & schedule every 30 seconds
-    const interval = setInterval(checkAlerts, 30000);
-    checkAlerts();
+    // Check low stock & expiry dates in the background with a 4s delay to prevent blocking startup rendering
+    const startupDelayTimer = setTimeout(() => {
+      checkAlerts();
+    }, 4000);
 
-    return () => clearInterval(interval);
+    const interval = setInterval(checkAlerts, 45000);
+
+    return () => {
+      clearTimeout(startupDelayTimer);
+      clearInterval(interval);
+    };
   }, []);
 
   const fetchNotifications = async () => {

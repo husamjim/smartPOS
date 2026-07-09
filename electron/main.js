@@ -1,8 +1,4 @@
-/**
- * Antigravity POS – Electron Desktop Main Process
- * Loads the Vite-built frontend from ./frontend/dist
- * Works 100% offline after first build.
- */
+global.bootStartTime = Date.now();
 
 const { app, BrowserWindow, Menu, shell } = require('electron');
 const path = require('path');
@@ -33,9 +29,18 @@ function createWindow() {
     },
   });
 
-  // Load the built frontend
+  // Load the built frontend with boot performance metrics query parameters
   const indexPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
-  mainWindow.loadFile(indexPath);
+  const appReadyTime = global.appReadyTime || Date.now();
+  const windowCreatedTime = Date.now();
+
+  mainWindow.loadFile(indexPath, {
+    query: {
+      bootStart: String(global.bootStartTime || (appReadyTime - 120)),
+      appReady: String(appReadyTime),
+      windowCreated: String(windowCreatedTime)
+    }
+  });
 
   // Show window gracefully once ready
   mainWindow.once('ready-to-show', () => {
@@ -70,7 +75,10 @@ app.on('second-instance', () => {
 // Remove default menu bar (POS apps don't need it)
 Menu.setApplicationMenu(null);
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  global.appReadyTime = Date.now();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   // On macOS it's common to keep app running

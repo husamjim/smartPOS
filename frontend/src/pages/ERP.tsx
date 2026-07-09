@@ -12,6 +12,10 @@ export const ERP: React.FC = () => {
   const [products, setProducts] = useState<LocalProduct[]>([]);
   const [batches, setBatches] = useState<LocalBatch[]>([]);
   
+  // Client-side pagination states for native performance
+  const [productsPage, setProductsPage] = useState(1);
+  const productsPerPage = 10;
+  
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -166,6 +170,10 @@ export const ERP: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [activeSubTab]);
+
+  useEffect(() => {
+    setProductsPage(1);
+  }, [searchQuery, activeSubTab]);
 
   const loadData = async () => {
     const p = await db.products.toArray();
@@ -611,6 +619,9 @@ export const ERP: React.FC = () => {
     );
   });
 
+  const totalProductsPages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
+  const paginatedProducts = filteredProducts.slice((productsPage - 1) * productsPerPage, productsPage * productsPerPage);
+
   const isRtl = document.documentElement.dir === 'rtl';
 
   return (
@@ -723,7 +734,7 @@ export const ERP: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProducts.map(p => (
+                    {paginatedProducts.map(p => (
                       <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/20">
                         <td className="p-3 py-3.5 font-bold">
                           <div className="flex items-center gap-2">
@@ -760,6 +771,29 @@ export const ERP: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Client-side pagination controls */}
+              {totalProductsPages > 1 && (
+                <div className="flex justify-between items-center px-4 py-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-xs select-none">
+                  <button
+                    onClick={() => setProductsPage(prev => Math.max(1, prev - 1))}
+                    disabled={productsPage === 1}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
+                  >
+                    {isRtl ? 'السابق' : 'Previous'}
+                  </button>
+                  <span className="font-bold text-slate-500">
+                    {isRtl ? `الصفحة ${productsPage} من ${totalProductsPages}` : `Page ${productsPage} of ${totalProductsPages}`}
+                  </span>
+                  <button
+                    onClick={() => setProductsPage(prev => Math.min(totalProductsPages, prev + 1))}
+                    disabled={productsPage === totalProductsPages}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
+                  >
+                    {isRtl ? 'التالي' : 'Next'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
