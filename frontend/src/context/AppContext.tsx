@@ -15,6 +15,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { seedLocalDbIfEmpty } from '../db/localDb';
+import { AuditLogger } from '../utils/auditLogger';
 
 export interface Branch {
   id: string;
@@ -125,7 +126,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'dark');
   const [language, setLanguage] = useState<string>(i18n.language || 'ar');
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
-  const [selectedBranch, setSelectedBranchState] = useState<Branch>(defaultBranches[0]);
+  
+  // Custom branches loader
+  const [branches] = useState<Branch[]>(() => {
+    try {
+      const saved = localStorage.getItem('pos_custom_branches');
+      return saved ? JSON.parse(saved) : defaultBranches;
+    } catch {
+      return defaultBranches;
+    }
+  });
+
+  const [selectedBranch, setSelectedBranchState] = useState<Branch>(() => {
+    try {
+      const saved = localStorage.getItem('pos_custom_branches');
+      const loaded = saved ? JSON.parse(saved) : defaultBranches;
+      return loaded[0] || defaultBranches[0];
+    } catch {
+      return defaultBranches[0];
+    }
+  });
   const [selectedWarehouse, setSelectedWarehouseState] = useState<Warehouse>(defaultWarehouses[0]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [businessType, setBusinessTypeState] = useState<BusinessType | null>(
@@ -145,6 +165,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [storeAddress, setStoreAddressState] = useState<string>(() => localStorage.getItem('pos_store_address') || '');
   const [receiptFooter, setReceiptFooterState] = useState<string>(() => localStorage.getItem('pos_receipt_footer') || 'شكراً لزيارتكم • Thank you for your visit');
   const [storeLogo, setStoreLogoState] = useState<string>(() => localStorage.getItem('pos_store_logo') || '');
+
+  // Load custom branding colors and font on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('pos_brand_config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        const root = document.documentElement;
+        if (config.colorPrimary) root.style.setProperty('--pos-primary', config.colorPrimary);
+        if (config.colorButton) root.style.setProperty('--pos-btn-bg', config.colorButton);
+        if (config.colorSidebar) root.style.setProperty('--pos-sidebar-bg', config.colorSidebar);
+        if (config.colorHeader) root.style.setProperty('--pos-header-bg', config.colorHeader);
+        if (config.colorInvoice) root.style.setProperty('--pos-inv-color', config.colorInvoice);
+        if (config.defaultFont) root.style.setProperty('--pos-font-family', config.defaultFont);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // User management — stored without exposing raw passwords
   const [users, setUsers] = useState<AppUser[]>(() => {
@@ -240,6 +277,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // SECURITY FIX: Use crypto.randomUUID instead of Math.random
     const newUser: AppUser = { ...u, id: 'u_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12) };
     setUsers(prev => [...prev, newUser]);
+    AuditLogger.log('CREATE_USER', 'users', `Created new user login profile: ${newUser.username}`, 'success', newUser.id);
   };
 
   const updateUser = (id: string, changes: Partial<AppUser>) => {
@@ -249,11 +287,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser(updated as AppUser);
       sessionStorage.setItem('pos_current_user', JSON.stringify(updated));
     }
+    AuditLogger.log('UPDATE_USER', 'users', `Modified user settings for user: ${id}`, 'success', id);
   };
 
   const deleteUser = (id: string) => {
     if (users.filter(u => u.active).length <= 1) return;
     setUsers(prev => prev.filter(u => u.id !== id));
+    AuditLogger.log('DELETE_USER', 'users', `Removed user profile from directory: ${id}`, 'warning', id);
   };
 
   // SECURITY FIX: Compare hashed passwords — fallback supports legacy plain-text for backward compat
@@ -271,12 +311,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (userMatch) {
       setCurrentUser(userMatch);
       sessionStorage.setItem('pos_current_user', JSON.stringify(userMatch));
+      AuditLogger.log('LOGIN', 'auth', `User logged in: ${userMatch.username}`, 'success', userMatch.id);
       return true;
     }
+    AuditLogger.log('LOGIN', 'auth', `Failed login attempt with username: ${username}`, 'failure');
     return false;
   };
 
   const logoutUser = () => {
+    if (currentUser) {
+      AuditLogger.log('LOGOUT', 'auth', `User logged out: ${currentUser.username}`, 'success', currentUser.id);
+    }
     setCurrentUser(null);
     sessionStorage.removeItem('pos_current_user');
   };
@@ -291,6 +336,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setActiveShift(shift);
     sessionStorage.setItem('pos_active_shift', JSON.stringify(shift));
+    AuditLogger.log('OPEN_SHIFT', 'shift', `Opened cashier shift with float: ${startCash} ${currency}`, 'success', shift.id);
   };
 
   const closeShift = (endCash: number, totalSales: number, totalOrders: number): ShiftRecord => {
@@ -306,6 +352,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = [closed, ...shiftHistory].slice(0, 100);
     setShiftHistory(updated);
     localStorage.setItem('pos_shift_history', JSON.stringify(updated));
+    AuditLogger.log('CLOSE_SHIFT', 'shift', `Closed cashier shift. Final cash: ${endCash} ${currency}. Total sales: ${totalSales} ${currency}`, 'success', closed.id);
     return closed;
   };
 
@@ -359,7 +406,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const value = useMemo(() => ({
     theme, toggleTheme, language, changeLanguage, isOnline,
     selectedBranch, setSelectedBranch, selectedWarehouse, setSelectedWarehouse,
-    branches: defaultBranches, warehouses: defaultWarehouses,
+    branches, warehouses: defaultWarehouses,
     devices, toggleDevice, triggerLocalSync, isSyncing,
     businessType, setBusinessType,
     currency, setCurrency, taxPercentage, setTaxPercentage,
@@ -372,7 +419,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme, language, isOnline, selectedBranch, selectedWarehouse, isSyncing,
        businessType, currency, taxPercentage, storeName, vatNumber, storePhone,
-       storeAddress, receiptFooter, storeLogo, users, currentUser, activeShift, shiftHistory, devices]);
+       storeAddress, receiptFooter, storeLogo, users, currentUser, activeShift, shiftHistory, devices, branches]);
 
   return (
     <AppContext.Provider value={value}>

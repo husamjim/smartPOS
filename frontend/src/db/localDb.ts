@@ -157,6 +157,30 @@ export interface AppSetting {
   value: string;
 }
 
+export interface LocalAuditLog {
+  id?: number;
+  timestamp: string;
+  user: string;
+  role: string;
+  action: string;
+  entity: string;
+  entityId?: string;
+  details: string;
+  branch: string;
+  result: 'success' | 'failure' | 'warning';
+  device?: string;
+  sessionId?: string;
+}
+
+export interface LocalNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  isRead: number; // 0 | 1
+  createdAt: string;
+}
+
 export class CashierDexieDb extends Dexie {
   products!: Table<LocalProduct>;
   batches!: Table<LocalBatch>;
@@ -170,6 +194,8 @@ export class CashierDexieDb extends Dexie {
   expenses!: Table<LocalExpense>;            // FIXED: was Table<any>
   refunds!: Table<LocalRefund>;
   appSettings!: Table<AppSetting>;
+  auditLog!: Table<LocalAuditLog>;
+  notifications!: Table<LocalNotification>;
 
   constructor() {
     super('CashierSystemDb');
@@ -219,6 +245,24 @@ export class CashierDexieDb extends Dexie {
       expenses: 'id, [branch_id+date], branch_id, category',
       refunds: 'id, original_order_id, refund_order_id, created_at',
       appSettings: 'key',  // NEW: persistent app settings table
+    });
+
+    // Version 5 — Added auditLog and notifications tables for Commercial Release
+    this.version(5).stores({
+      products: 'id, name_en, name_ar, sku, barcode, category, is_pharmaceutical',
+      batches: 'id, product_id, warehouse_id, batch_number, expiry_date',
+      customers: 'id, name, phone, email, tier',
+      orders: 'id, invoice_number, [branch_id+created_at], branch_id, customer_id, payment_status, is_synced, created_at, refund_of_order_id, status',
+      orderItems: 'id, order_id, product_id, batch_id',
+      suspendedOrders: 'id, invoice_number, date, branch_id',
+      offlineQueue: '++id, action, table, timestamp, retryCount',
+      suppliers: 'id, name, phone',
+      purchaseOrders: 'id, supplier_id, status, created_at',
+      expenses: 'id, [branch_id+date], branch_id, category',
+      refunds: 'id, original_order_id, refund_order_id, created_at',
+      appSettings: 'key',
+      auditLog: '++id, timestamp, user, action, entity, branch',
+      notifications: 'id, type, isRead, createdAt'
     });
   }
 }

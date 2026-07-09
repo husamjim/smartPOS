@@ -12,8 +12,10 @@ const Reports = React.lazy(() => import('./pages/Reports').then(m => ({ default:
 const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 const AIAssistant = React.lazy(() => import('./pages/AIAssistant').then(m => ({ default: m.AIAssistant })));
 const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const DataImport = React.lazy(() => import('./pages/DataImport').then(m => ({ default: m.DataImport })));
 import { BusinessSelector } from './components/shared/BusinessSelector';
 import { HardwareService } from './services/hardware';
+import { NotificationBell } from './components/NotificationBell';
 
 // Icons
 import {
@@ -33,7 +35,8 @@ import {
   Printer,
   ChevronLeft,
   ChevronRight,
-  Store
+  Store,
+  Upload
 } from 'lucide-react';
 
 export default function App() {
@@ -58,7 +61,7 @@ export default function App() {
 
   const { receiptPreview, setReceiptPreview } = useCart();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'erp' | 'crm' | 'kds' | 'reports' | 'ai_assistant' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'erp' | 'crm' | 'kds' | 'reports' | 'ai_assistant' | 'settings' | 'data_import'>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showHardwareSim, setShowHardwareSim] = useState(false);
   const [scanInput, setScanInput] = useState('');
@@ -558,6 +561,7 @@ export default function App() {
     ...((currentUser?.role !== 'cashier') ? [
       { id: 'reports' as const, label: t('reports'), icon: BarChart3 },
       { id: 'ai_assistant' as const, label: t('ai_assistant'), icon: Sparkles, color: 'text-cyan-500' },
+      { id: 'data_import' as const, label: isRtl ? '📥 استيراد البيانات' : 'Import Data', icon: Upload },
       { id: 'settings' as const, label: t('settings'), icon: SettingsIcon }
     ] : [])
   ];
@@ -677,6 +681,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBell />
 
             {/* Devices controller link shortcut */}
             {import.meta.env.DEV && (
@@ -723,6 +728,7 @@ export default function App() {
             {activeTab === 'reports' && <Reports />}
             {activeTab === 'ai_assistant' && <AIAssistant />}
             {activeTab === 'settings' && <Settings />}
+            {activeTab === 'data_import' && <DataImport />}
           </React.Suspense>
         </main>
       </div>

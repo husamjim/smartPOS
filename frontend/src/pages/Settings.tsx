@@ -4,7 +4,18 @@ import { useApp } from '../context/AppContext';
 import { db, seedLocalDbIfEmpty } from '../db/localDb';
 import { HardwareService } from '../services/hardware';
 
+// New Sub-components Imports
+import { BackupCenter } from '../components/settings/BackupCenter';
+import { AuditLogPanel } from '../components/settings/AuditLogPanel';
+import { NotificationCenter } from '../components/settings/NotificationCenter';
+import { UpdatesCenter } from '../components/settings/UpdatesCenter';
+import { SupportCenter } from '../components/settings/SupportCenter';
+import { BrandSettings } from '../components/settings/BrandSettings';
+import { AboutSystem } from '../components/settings/AboutSystem';
+
 export const Settings: React.FC = () => {
+  const [settingsTab, setSettingsTab] = React.useState<'general' | 'brand' | 'invoice' | 'users' | 'ai' | 'backup' | 'accounts' | 'audit' | 'notifications' | 'updates' | 'support' | 'about'>('general');
+
   const {
     theme,
     toggleTheme,
@@ -253,84 +264,7 @@ export const Settings: React.FC = () => {
     { code: 'KES', name: 'Kenyan Shilling (شلن كيني)' }
   ];
 
-  const handleExportDatabase = async () => {
-    try {
-      const exportData: Record<string, any[]> = {};
-      const tableNames = [
-        'products', 'batches', 'customers', 'orders', 
-        'orderItems', 'suspendedOrders', 'suppliers', 
-        'purchaseOrders', 'expenses'
-      ] as const;
 
-      for (const tName of tableNames) {
-        exportData[tName] = await (db as any)[tName].toArray();
-      }
-
-      const jsonStr = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `antigravity_pos_backup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      alert(isRtl ? 'تم تصدير قاعدة البيانات بنجاح كملف JSON.' : 'Database exported successfully as JSON.');
-    } catch (e: any) {
-      alert(isRtl ? 'فشل تصدير البيانات: ' + e.message : 'Export failed: ' + e.message);
-    }
-  };
-
-  const handleImportDatabase = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!confirm(isRtl ? 'تحذير: سيؤدي استيراد الملف إلى استبدال البيانات الحالية. هل تريد المتابعة؟' : 'Warning: Importing will overwrite existing data. Proceed?')) {
-      return;
-    }
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const jsonStr = e.target?.result as string;
-          const importData = JSON.parse(jsonStr);
-
-          const tableNames = [
-            'products', 'batches', 'customers', 'orders', 
-            'orderItems', 'suspendedOrders', 'suppliers', 
-            'purchaseOrders', 'expenses'
-          ] as const;
-
-          for (const tName of tableNames) {
-            await (db as any)[tName].clear();
-            if (Array.isArray(importData[tName])) {
-              await (db as any)[tName].bulkAdd(importData[tName]);
-            }
-          }
-
-          alert(isRtl ? 'تم استيراد قاعدة البيانات واستعادة النسخة الاحتياطية بنجاح!' : 'Database restored successfully!');
-          window.location.reload();
-        } catch (err: any) {
-          alert(isRtl ? 'ملف النسخة الاحتياطية غير صالح: ' + err.message : 'Invalid backup file: ' + err.message);
-        }
-      };
-      reader.readAsText(file);
-    } catch (e: any) {
-      alert(isRtl ? 'فشل قراءة الملف: ' + e.message : 'File read failed: ' + e.message);
-    }
-  };
-
-  const [isCloudSyncing, setIsCloudSyncing] = React.useState(false);
-  const handleCloudBackup = async () => {
-    setIsCloudSyncing(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setIsCloudSyncing(false);
-    alert(isRtl ? 'تم رفع نسخة احتياطية سحابية مشفرة بنجاح إلى سيرفر المزامنة المركزي ☁️' : 'Encrypted cloud backup uploaded successfully to central server ☁️');
-  };
 
   const [isPrinterConnecting, setIsPrinterConnecting] = React.useState(false);
   const [isScaleConnecting, setIsScaleConnecting] = React.useState(false);
@@ -578,7 +512,40 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Settings Navigation Tabs */}
+      <div className="flex gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto text-[11px] font-bold">
+        {[
+          { id: 'general', label: isRtl ? '⚙️ عام وملحقات' : 'General & Peripherals' },
+          { id: 'brand', label: isRtl ? '🎨 الهوية والألوان' : 'Branding & Theme' },
+          { id: 'invoice', label: isRtl ? '🧾 الفاتورة والمتجر' : 'Invoice Settings' },
+          ...(currentUser?.role === 'owner' ? [{ id: 'users', label: isRtl ? '👥 المستخدمين' : 'User Accounts' }] : []),
+          { id: 'ai', label: isRtl ? '🤖 الذكاء الاصطناعي' : 'AI Assistant' },
+          { id: 'backup', label: isRtl ? '💾 النسخ الاحتياطي' : 'Backup Center' },
+          ...(currentUser?.role === 'owner' ? [{ id: 'accounts', label: isRtl ? '📊 شجرة الحسابات' : 'Chart of Accounts' }] : []),
+          ...(currentUser?.role === 'owner' ? [{ id: 'audit', label: isRtl ? '📋 سجل النشاطات' : 'Activity Trail Log' }] : []),
+          { id: 'notifications', label: isRtl ? '🔔 الإشعارات' : 'Notifications' },
+          { id: 'updates', label: isRtl ? '🔄 التحديثات' : 'System Updates' },
+          { id: 'support', label: isRtl ? '📞 الدعم الفني' : 'Technical Support' },
+          { id: 'about', label: isRtl ? 'ℹ️ حول النظام' : 'About System' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setSettingsTab(tab.id as any)}
+            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap ${
+              settingsTab === tab.id
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Conditionally Rendered Panels */}
+      {settingsTab === 'general' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Appearance & Localization */}
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
           <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
@@ -752,36 +719,25 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Backup & Restore – Full Width */}
-      <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
-        <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
-          <Database className="h-4.5 w-4.5 text-amber-500" />
-          {isRtl ? 'النسخ الاحتياطي واستعادة البيانات' : 'Backup, Restore & Cloud Sync'}
-        </h3>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-normal leading-relaxed">
-          {isRtl ? 'صدّر بياناتك كاملة كملف JSON أو أعد تحميلها في أي جهاز آخر يعمل بالنظام. تعمل بالكامل بدون انترنت.' : 'Export your full database as a JSON backup file, or restore it on any device. Works fully offline.'}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button onClick={handleExportDatabase}
-            className="py-2.5 px-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all">
-            <Database className="h-3.5 w-3.5" />
-            {isRtl ? '📥 تصدير نسخة JSON' : '📥 Export JSON Backup'}
-          </button>
-          <label className="py-2.5 px-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-            <Database className="h-3.5 w-3.5" />
-            {isRtl ? '📤 استيراد واستعادة' : '📤 Import & Restore'}
-            <input type="file" accept=".json" onChange={handleImportDatabase} className="hidden" />
-          </label>
-          <button onClick={handleCloudBackup} disabled={isCloudSyncing}
-            className={`py-2.5 px-3 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all ${isCloudSyncing ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'}`}>
-            {isCloudSyncing ? <><span className="animate-spin h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full" />{isRtl ? 'جاري المزامنة...' : 'Syncing...'}</> : <>{isRtl ? '☁️ مزامنة سحابية مشفرة' : '☁️ Encrypted Cloud Sync'}</>}
-          </button>
-        </div>
       </div>
+      )}
+
+      {settingsTab === 'brand' && <BrandSettings />}
+
+      {settingsTab === 'backup' && <BackupCenter />}
+
+      {settingsTab === 'audit' && <AuditLogPanel />}
+
+      {settingsTab === 'notifications' && <NotificationCenter />}
+
+      {settingsTab === 'updates' && <UpdatesCenter />}
+
+      {settingsTab === 'support' && <SupportCenter />}
+
+      {settingsTab === 'about' && <AboutSystem />}
 
       {/* TASK A – User Management Panel (owner-only) */}
-      {currentUser?.role === 'owner' && (
+      {settingsTab === 'users' && currentUser?.role === 'owner' && (
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
           <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
             <Users className="h-4.5 w-4.5 text-purple-500" />
@@ -936,7 +892,7 @@ export const Settings: React.FC = () => {
       )}
 
       {/* Restaurant Tables Management (Conditionally shown) */}
-      {businessType === 'restaurant' && (
+      {settingsTab === 'general' && businessType === 'restaurant' && (
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
           <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
             <span className="text-xl">🍽️</span>
@@ -997,7 +953,7 @@ export const Settings: React.FC = () => {
       )}
 
       {/* TASK C – Restaurant Modifiers Panel (Conditionally shown) */}
-      {businessType === 'restaurant' && (
+      {settingsTab === 'general' && businessType === 'restaurant' && (
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
           <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
             <span className="text-xl">🍽️</span>
@@ -1062,7 +1018,7 @@ export const Settings: React.FC = () => {
       )}
 
       {/* Clothing Retail Customization settings (Conditionally shown) */}
-      {businessType === 'retail' && (
+      {settingsTab === 'general' && businessType === 'retail' && (
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-6 animate-fade-in">
           <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
             <span className="text-xl">👕</span>
@@ -1176,7 +1132,7 @@ export const Settings: React.FC = () => {
       )}
 
       {/* Diagnostics / Testing block */}
-      {import.meta.env.DEV && (
+      {settingsTab === 'general' && import.meta.env.DEV && (
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
           <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
             <Database className="h-4.5 w-4.5 text-amber-500" />
@@ -1222,7 +1178,8 @@ export const Settings: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════
           AI ASSISTANT SETTINGS
       ══════════════════════════════════════════════════════════════ */}
-      <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
+      {settingsTab === 'ai' && (
+        <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
         <h3 className="font-bold text-sm flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-3">
           <span className="text-lg">🤖</span>
           {isRtl ? 'إعدادات الذكاء الاصطناعي (AI Assistant)' : 'AI Assistant Configuration'}
@@ -1296,11 +1253,13 @@ export const Settings: React.FC = () => {
           </button>
         </div>
       </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           INVOICE / STORE SETTINGS
       ══════════════════════════════════════════════════════════════ */}
-      <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
+      {settingsTab === 'invoice' && (
+        <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
         <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
           <h3 className="font-bold text-sm flex items-center gap-1.5">
             <span className="text-lg">🧾</span>
@@ -1413,11 +1372,12 @@ export const Settings: React.FC = () => {
           {isRtl ? '💾 حفظ إعدادات الفاتورة' : '💾 Save Invoice Settings'}
         </button>
       </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           CHART OF ACCOUNTS
       ══════════════════════════════════════════════════════════════ */}
-      {currentUser?.role === 'owner' && (
+      {settingsTab === 'accounts' && currentUser?.role === 'owner' && (
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
           <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 className="font-bold text-sm flex items-center gap-1.5">
