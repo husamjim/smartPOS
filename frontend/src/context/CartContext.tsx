@@ -102,6 +102,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTotalAmount(finalTotal);
   }, [cartItems, selectedCustomer, couponDiscount]);
 
+  // Sync active table cart changes back to DB (Single Source of Truth)
+  useEffect(() => {
+    if (activeTable) {
+      const syncTableToDb = async () => {
+        try {
+          const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+          const existing = list.find(o => o.table_number === activeTable);
+          if (existing) {
+            await db.suspendedOrders.update(existing.id, {
+              items: JSON.parse(JSON.stringify(cartItems)),
+              customer: selectedCustomer,
+              total: totalAmount,
+              date: new Date().toISOString()
+            });
+          }
+          await loadSuspendedList();
+        } catch (err) {
+          console.error("Failed to sync active table to database:", err);
+        }
+      };
+      syncTableToDb();
+    }
+  }, [cartItems, selectedCustomer, totalAmount, activeTable]);
+
   /* istanbul ignore next */
   const loadSuspendedList = async () => {
     try {
@@ -171,11 +195,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /* istanbul ignore next */
-  const clearCart = () => {
+  const clearCart = async () => {
+    if (activeTable) {
+      const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+      const existing = list.find(o => o.table_number === activeTable);
+      if (existing) {
+        await db.suspendedOrders.delete(existing.id);
+      }
+      setActiveTableState(null);
+    }
     setCartItems([]);
     setSelectedCustomer(undefined);
     setCouponCode('');
     setCouponDiscount(0);
+    await loadSuspendedList();
   };
 
   /* istanbul ignore next */
@@ -196,42 +229,72 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   /* istanbul ignore next */
   const setActiveTable = async (tableName: string | null) => {
-    if (cartItems.length > 0) {
-      if (activeTable) {
+    if (tableName === null) {
+      if (activeTable && cartItems.length > 0) {
+        const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+        const existing = list.find(o => o.table_number === activeTable);
+        if (existing) {
+          await db.suspendedOrders.update(existing.id, {
+            items: JSON.parse(JSON.stringify(cartItems)),
+            customer: selectedCustomer,
+            total: totalAmount,
+            date: new Date().toISOString()
+          });
+        }
+      } else if (activeTable && cartItems.length === 0) {
         const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
         const existing = list.find(o => o.table_number === activeTable);
         if (existing) {
           await db.suspendedOrders.delete(existing.id);
         }
       }
-      const suspendedId = 'susp_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-      const invoiceNum = activeTable ? `TBL-${activeTable.replace(/\s+/g, '')}-${Date.now().toString().slice(-4)}` : 'SUSP-' + Date.now();
-      await db.suspendedOrders.add({
-        id: suspendedId,
-        invoice_number: invoiceNum,
-        items: JSON.parse(JSON.stringify(cartItems)),
-        customer: selectedCustomer,
-        total: totalAmount,
-        date: new Date().toISOString(),
-        branch_id: selectedBranch.id,
-        table_number: activeTable || undefined
-      });
+      setActiveTableState(null);
+      setCartItems([]);
+      setSelectedCustomer(undefined);
+      await loadSuspendedList();
+      return;
+    }
+
+    if (activeTable && activeTable !== tableName && cartItems.length > 0) {
+      const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+      const existing = list.find(o => o.table_number === activeTable);
+      if (existing) {
+        await db.suspendedOrders.update(existing.id, {
+          items: JSON.parse(JSON.stringify(cartItems)),
+          customer: selectedCustomer,
+          total: totalAmount,
+          date: new Date().toISOString()
+        });
+      }
+    } else if (activeTable && activeTable !== tableName && cartItems.length === 0) {
+      const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+      const existing = list.find(o => o.table_number === activeTable);
+      if (existing) {
+        await db.suspendedOrders.delete(existing.id);
+      }
     }
 
     setActiveTableState(tableName);
 
-    if (tableName) {
-      const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
-      const openOrder = list.find(o => o.table_number === tableName);
-      if (openOrder) {
-        setCartItems(openOrder.items || []);
-        setSelectedCustomer(openOrder.customer);
-        await db.suspendedOrders.delete(openOrder.id);
-      } else {
-        setCartItems([]);
-        setSelectedCustomer(undefined);
-      }
+    const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+    const openOrder = list.find(o => o.table_number === tableName);
+
+    if (openOrder) {
+      setCartItems(openOrder.items || []);
+      setSelectedCustomer(openOrder.customer);
     } else {
+      const suspendedId = 'susp_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+      const invoiceNum = `TBL-${tableName.replace(/\s+/g, '')}-${Date.now().toString().slice(-4)}`;
+      await db.suspendedOrders.add({
+        id: suspendedId,
+        invoice_number: invoiceNum,
+        items: [],
+        customer: undefined,
+        total: 0,
+        date: new Date().toISOString(),
+        branch_id: selectedBranch.id,
+        table_number: tableName
+      });
       setCartItems([]);
       setSelectedCustomer(undefined);
     }
@@ -246,26 +309,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
       const existing = list.find(o => o.table_number === activeTable);
       if (existing) {
-        await db.suspendedOrders.delete(existing.id);
+        await db.suspendedOrders.update(existing.id, {
+          items: JSON.parse(JSON.stringify(cartItems)),
+          customer: selectedCustomer,
+          total: totalAmount,
+          date: new Date().toISOString()
+        });
       }
+    } else {
+      const suspendedId = 'susp_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+      const invoiceNum = 'SUSP-' + Date.now();
+      
+      await db.suspendedOrders.add({
+        id: suspendedId,
+        invoice_number: invoiceNum,
+        items: JSON.parse(JSON.stringify(cartItems)),
+        customer: selectedCustomer,
+        total: totalAmount,
+        date: new Date().toISOString(),
+        branch_id: selectedBranch.id
+      });
     }
-
-    const suspendedId = 'susp_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-    const invoiceNum = activeTable ? `TBL-${activeTable.replace(/\s+/g, '')}-${Date.now().toString().slice(-4)}` : 'SUSP-' + Date.now();
-    
-    await db.suspendedOrders.add({
-      id: suspendedId,
-      invoice_number: invoiceNum,
-      items: JSON.parse(JSON.stringify(cartItems)),
-      customer: selectedCustomer,
-      total: totalAmount,
-      date: new Date().toISOString(),
-      branch_id: selectedBranch.id,
-      table_number: activeTable || undefined
-    });
     
     setActiveTableState(null);
-    clearCart();
+    setCartItems([]);
+    setSelectedCustomer(undefined);
     await loadSuspendedList();
   };
 
@@ -277,7 +345,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCartItems(order.items);
     setSelectedCustomer(order.customer);
     setActiveTableState(order.table_number || null);
-    await db.suspendedOrders.delete(suspendedId);
+    if (!order.table_number) {
+      await db.suspendedOrders.delete(suspendedId);
+    }
     await loadSuspendedList();
   };
 
@@ -452,11 +522,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     `;
 
     // Clear cart and active table
-    setActiveTableState(null);
-    clearCart();
-    
-    // Refresh lists
-    await loadSuspendedList();
+    await clearCart();
 
     return { orderId, invoiceNum, receiptHtml };
   };

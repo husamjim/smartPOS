@@ -390,6 +390,15 @@ export const Settings: React.FC = () => {
     alert('درج النقود: تم إرسال إشارة فتح الدرج بنجاح (محاكاة + صوت دينغ).');
   };
 
+  const handleSeedOptional = async () => {
+    if (confirm(isRtl ? 'هل تريد تحميل البيانات التجريبية الاختيارية (أصناف ديمو، عملاء، موردين، وباتشات مستودعات)؟' : 'Do you want to load optional demo dataset (mock products, customers, suppliers, batches)?')) {
+      const { seedLocalDbOptional } = await import('../db/localDb');
+      await seedLocalDbOptional();
+      alert(isRtl ? 'تم تحميل البيانات التجريبية بنجاح.' : 'Demo data populated successfully.');
+      window.location.reload();
+    }
+  };
+
   const handleResetDatabase = async () => {
     if (confirm('هل أنت متأكد من مسح وإعادة تهيئة قاعدة البيانات المحلية؟ سيتم حذف جميع المبيعات والعملاء غير المزامنين.')) {
       await db.delete();
@@ -1017,7 +1026,7 @@ export const Settings: React.FC = () => {
             {isRtl ? 'أدوات التشخيص والاختبار' : 'Diagnostics & System Actions'}
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <button
               onClick={handleTestPrint}
               className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs flex flex-col items-center gap-2 transition-all shadow-xs"
@@ -1032,6 +1041,14 @@ export const Settings: React.FC = () => {
             >
               <span className="text-xl">💰</span>
               {isRtl ? 'فتح اختبار درج الكاش' : 'Test Open Cash Drawer'}
+            </button>
+
+            <button
+              onClick={handleSeedOptional}
+              className="p-3 rounded-xl border border-blue-500/10 bg-blue-500/5 hover:bg-blue-500/10 font-bold text-xs text-blue-600 dark:text-blue-400 flex flex-col items-center gap-2 transition-all shadow-xs"
+            >
+              <span className="text-xl">⚡</span>
+              {isRtl ? 'تحميل بيانات تجريبية' : 'Seed Demo Data'}
             </button>
 
             <button

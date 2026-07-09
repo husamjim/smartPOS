@@ -106,38 +106,6 @@ export const Kitchen: React.FC = () => {
       }
     }
 
-    // Seed mock active tickets if empty to demonstrate KDS functionality
-    if (kitchenList.length === 0) {
-      const tenMinsAgo = new Date(new Date().getTime() - 10 * 60000).toISOString();
-      const fiveMinsAgo = new Date(new Date().getTime() - 5 * 60000).toISOString();
-      
-      kitchenList.push({
-        id: 'k_1',
-        invoice_number: 'INV-20260618-8092',
-        table_number: 'Table 12',
-        type: 'dine_in',
-        items: [
-          { name_ar: 'كومبو دبل بيف برجر', name_en: 'Double Beef Burger Combo', quantity: 2, notes: 'بدون مايونيز، بطاطس حجم كبير' },
-          { name_ar: 'بيتزا مارغريتا كلاسيك', name_en: 'Classic Margherita Pizza', quantity: 1 }
-        ],
-        status: 'preparing',
-        created_at: tenMinsAgo,
-        elapsed: 10
-      });
-
-      kitchenList.push({
-        id: 'k_2',
-        invoice_number: 'INV-20260618-9122',
-        type: 'takeaway',
-        items: [
-          { name_ar: 'صاروخ شاورما دجاج', name_en: 'Shawarma Wrap', quantity: 3, notes: 'شطة زيادة، ثوم خارجي' }
-        ],
-        status: 'pending',
-        created_at: fiveMinsAgo,
-        elapsed: 5
-      });
-    }
-
     setOrders(kitchenList);
   };
 
