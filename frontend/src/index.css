@@ -134,3 +134,132 @@ h1, h2, h3, h4, h5, h6 {
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* Unified Dark Mode Design Tokens (Production RC Hardened) */
+.dark body {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Base card bg overrides in dark mode */
+.dark .glass-card,
+.dark .bg-white,
+.dark .bg-slate-50,
+.dark .bg-slate-100\/50,
+.dark .bg-slate-900\/40,
+.dark .bg-slate-950\/40 {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+}
+
+/* Secondary dark bg containers */
+.dark .bg-slate-100,
+.dark .bg-slate-50\/20,
+.dark .bg-slate-950\/20,
+.dark .bg-slate-950,
+.dark .bg-slate-900 {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+}
+
+/* Headings in dark mode */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: #ffffff !important;
+}
+
+/* Text gray variants in dark mode */
+.dark .text-slate-550,
+.dark .text-slate-600,
+.dark .text-slate-550,
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: #9ca3af !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-800 {
+  color: #e5e7eb !important;
+}
+
+/* Dark mode inputs, selections, and fields */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #ffffff !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Standard buttons in dark mode */
+.dark button:not(.bg-blue-600):not(.bg-indigo-650):not(.bg-red-500):not(.bg-green-500):not(.bg-orange-500):not(.bg-amber-500):not(.bg-gradient-to-r) {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+  border-color: #374151 !important;
+}
+
+.dark button:not(.bg-blue-600):not(.bg-indigo-650):not(.bg-red-500):not(.bg-green-500):not(.bg-orange-500):not(.bg-amber-500):not(.bg-gradient-to-r):hover {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+}
+
+/* Table styling in dark mode */
+.dark table {
+  background-color: #111827 !important;
+  color: #f3f4f6 !important;
+}
+
+.dark tr {
+  border-bottom-color: #1f2937 !important;
+}
+
+.dark tr:hover {
+  background-color: #1f2937 !important;
+}
+
+.dark th {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+/* Modals and dialog structures in dark mode */
+.dark .modal-content,
+.dark [role="dialog"],
+.dark .dropdown-content,
+.dark .popover-content,
+.dark .side-panel {
+  background-color: #111827 !important;
+  border-color: #374151 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Mobile Responsiveness & Touch Optimization */
+@media (max-width: 768px) {
+  button, select, input, a {
+    min-height: 40px; /* Touch target enhancement */
+  }
+
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS */
+  }
+
+  .grid-cols-6, .grid-cols-5, .grid-cols-4, .grid-cols-3 {
+    grid-template-cols: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
