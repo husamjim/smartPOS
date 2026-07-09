@@ -411,6 +411,163 @@ export const Settings: React.FC = () => {
 
   const isRtl = document.documentElement.dir === 'rtl';
 
+  // ── AI Assistant Settings state ───────────────────────────────────────────
+  const [aiProvider, setAiProvider] = React.useState(() => {
+    try { const c = JSON.parse(atob(localStorage.getItem('pos_ai_config') || '')); return c.provider || 'openai'; } catch { return 'openai'; }
+  });
+  const [aiKeyRaw, setAiKeyRaw] = React.useState('');
+  const [aiBaseUrl, setAiBaseUrl] = React.useState(() => {
+    try { const c = JSON.parse(atob(localStorage.getItem('pos_ai_config') || '')); return c.baseUrl || ''; } catch { return ''; }
+  });
+  const [aiModel, setAiModel] = React.useState(() => {
+    try { const c = JSON.parse(atob(localStorage.getItem('pos_ai_config') || '')); return c.model || ''; } catch { return ''; }
+  });
+  const [aiSaved, setAiSaved] = React.useState(!!localStorage.getItem('pos_ai_config'));
+  const [aiTesting, setAiTesting] = React.useState(false);
+  const [aiTestResult, setAiTestResult] = React.useState<'idle' | 'ok' | 'fail'>('idle');
+
+  const AI_MODELS: Record<string, {label: string; models: string[]}> = {
+    openai: { label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+    gemini: { label: 'Google Gemini', models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'] },
+    anthropic: { label: 'Anthropic Claude', models: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'] },
+    openrouter: { label: 'OpenRouter', models: ['openai/gpt-4o', 'anthropic/claude-opus-4-5', 'meta-llama/llama-3.1-405b'] },
+  };
+
+  const handleSaveAi = () => {
+    const keyToSave = aiKeyRaw.trim() || (aiSaved ? JSON.parse(atob(localStorage.getItem('pos_ai_config') || 'e30=')).key : '');
+    if (!keyToSave) { alert(isRtl ? 'الرجاء إدخال مفتاح API' : 'Please enter an API key'); return; }
+    const cfg = { provider: aiProvider, key: keyToSave, baseUrl: aiBaseUrl, model: aiModel };
+    localStorage.setItem('pos_ai_config', btoa(JSON.stringify(cfg)));
+    setAiKeyRaw('');
+    setAiSaved(true);
+    setAiTestResult('idle');
+    alert(isRtl ? 'تم حفظ إعدادات الذكاء الاصطناعي بنجاح.' : 'AI settings saved successfully.');
+  };
+
+  const handleTestAi = async () => {
+    const savedCfg = localStorage.getItem('pos_ai_config');
+    if (!savedCfg) { alert(isRtl ? 'احفظ الإعدادات أولاً' : 'Save settings first'); return; }
+    setAiTesting(true);
+    setAiTestResult('idle');
+    try {
+      const cfg = JSON.parse(atob(savedCfg));
+      let url = '';
+      let headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      let body: any;
+      if (cfg.provider === 'openai') {
+        url = (cfg.baseUrl || 'https://api.openai.com') + '/v1/chat/completions';
+        headers['Authorization'] = `Bearer ${cfg.key}`;
+        body = { model: cfg.model || 'gpt-4o-mini', messages: [{role: 'user', content: 'ping'}], max_tokens: 1 };
+      } else if (cfg.provider === 'gemini') {
+        url = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model || 'gemini-1.5-flash'}:generateContent?key=${cfg.key}`;
+        body = { contents: [{parts: [{text: 'ping'}]}], generationConfig: {maxOutputTokens: 1} };
+      } else if (cfg.provider === 'anthropic') {
+        url = 'https://api.anthropic.com/v1/messages';
+        headers['x-api-key'] = cfg.key;
+        headers['anthropic-version'] = '2023-06-01';
+        body = { model: cfg.model || 'claude-haiku-3-5', max_tokens: 1, messages: [{role:'user', content:'ping'}] };
+      } else {
+        url = (cfg.baseUrl || 'https://openrouter.ai/api') + '/v1/chat/completions';
+        headers['Authorization'] = `Bearer ${cfg.key}`;
+        body = { model: cfg.model || 'openai/gpt-4o', messages: [{role:'user', content:'ping'}], max_tokens: 1 };
+      }
+      const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+      setAiTestResult(res.ok || res.status === 400 ? 'ok' : 'fail');
+    } catch { setAiTestResult('fail'); }
+    setAiTesting(false);
+  };
+
+  // ── Invoice / Store Settings state ────────────────────────────────────────
+  const [invPhone2, setInvPhone2] = React.useState(() => localStorage.getItem('pos_store_phone2') || '');
+  const [invEmail, setInvEmail] = React.useState(() => localStorage.getItem('pos_store_email') || '');
+  const [invWebsite, setInvWebsite] = React.useState(() => localStorage.getItem('pos_store_website') || '');
+  const [invCrNumber, setInvCrNumber] = React.useState(() => localStorage.getItem('pos_store_cr') || '');
+  const [invPaperSize, setInvPaperSize] = React.useState(() => localStorage.getItem('pos_invoice_paper') || '80mm');
+  const [invReturnPolicy, setInvReturnPolicy] = React.useState(() => localStorage.getItem('pos_return_policy') || '');
+  const [invShowLogo, setInvShowLogo] = React.useState(() => localStorage.getItem('pos_inv_show_logo') !== 'false');
+  const [invShowAddress, setInvShowAddress] = React.useState(() => localStorage.getItem('pos_inv_show_address') !== 'false');
+  const [invShowPhone, setInvShowPhone] = React.useState(() => localStorage.getItem('pos_inv_show_phone') !== 'false');
+  const [invShowTax, setInvShowTax] = React.useState(() => localStorage.getItem('pos_inv_show_tax') !== 'false');
+  const [invShowQr, setInvShowQr] = React.useState(() => localStorage.getItem('pos_inv_show_qr') !== 'false');
+  const [invShowCr, setInvShowCr] = React.useState(() => localStorage.getItem('pos_inv_show_cr') !== 'false');
+  const [invColor, setInvColor] = React.useState(() => localStorage.getItem('pos_inv_color') || '#3b82f6');
+  const [invSavedMsg, setInvSavedMsg] = React.useState('');
+
+  const handleSaveInvoice = () => {
+    localStorage.setItem('pos_store_phone2', invPhone2);
+    localStorage.setItem('pos_store_email', invEmail);
+    localStorage.setItem('pos_store_website', invWebsite);
+    localStorage.setItem('pos_store_cr', invCrNumber);
+    localStorage.setItem('pos_invoice_paper', invPaperSize);
+    localStorage.setItem('pos_return_policy', invReturnPolicy);
+    localStorage.setItem('pos_inv_show_logo', String(invShowLogo));
+    localStorage.setItem('pos_inv_show_address', String(invShowAddress));
+    localStorage.setItem('pos_inv_show_phone', String(invShowPhone));
+    localStorage.setItem('pos_inv_show_tax', String(invShowTax));
+    localStorage.setItem('pos_inv_show_qr', String(invShowQr));
+    localStorage.setItem('pos_inv_show_cr', String(invShowCr));
+    localStorage.setItem('pos_inv_color', invColor);
+    setInvSavedMsg(isRtl ? '✓ تم الحفظ' : '✓ Saved');
+    setTimeout(() => setInvSavedMsg(''), 2500);
+  };
+
+  // ── Chart of Accounts state ───────────────────────────────────────────────
+  type Account = { id: string; code: string; name_ar: string; name_en: string; type: string; parent: string };
+  const [accounts, setAccounts] = React.useState<Account[]>(() => {
+    try { return JSON.parse(localStorage.getItem('pos_chart_of_accounts') || '[]'); } catch { return []; }
+  });
+  const [showAccForm, setShowAccForm] = React.useState(false);
+  const [editingAccId, setEditingAccId] = React.useState<string | null>(null);
+  const [accForm, setAccForm] = React.useState({ code: '', name_ar: '', name_en: '', type: 'asset', parent: '' });
+  const [accSearch, setAccSearch] = React.useState('');
+
+  React.useEffect(() => {
+    localStorage.setItem('pos_chart_of_accounts', JSON.stringify(accounts));
+  }, [accounts]);
+
+  const handleSaveAccount = () => {
+    if (!accForm.code.trim() || !accForm.name_ar.trim()) {
+      alert(isRtl ? 'رقم الحساب والاسم بالعربي مطلوبان' : 'Account code and Arabic name are required');
+      return;
+    }
+    if (editingAccId) {
+      setAccounts(prev => prev.map(a => a.id === editingAccId ? { ...a, ...accForm } : a));
+    } else {
+      setAccounts(prev => [...prev, { id: Date.now().toString(), ...accForm }]);
+    }
+    setAccForm({ code: '', name_ar: '', name_en: '', type: 'asset', parent: '' });
+    setEditingAccId(null);
+    setShowAccForm(false);
+  };
+
+  const handleDeleteAccount = (id: string) => {
+    if (confirm(isRtl ? 'هل تريد حذف هذا الحساب؟' : 'Delete this account?')) {
+      setAccounts(prev => prev.filter(a => a.id !== id));
+    }
+  };
+
+  const handleExportAccounts = () => {
+    const csv = ['Code,Name AR,Name EN,Type,Parent', ...accounts.map(a => `${a.code},${a.name_ar},${a.name_en},${a.type},${a.parent}`)].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = 'chart_of_accounts.csv';
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportAccounts = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target?.result as string);
+        if (Array.isArray(imported)) { setAccounts(imported); alert(isRtl ? 'تم الاستيراد بنجاح' : 'Imported successfully'); }
+      } catch { alert(isRtl ? 'ملف غير صالح (يجب أن يكون JSON)' : 'Invalid file (must be JSON)'); }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-2 pb-4 border-b border-slate-200 dark:border-slate-800">
@@ -1061,6 +1218,343 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          AI ASSISTANT SETTINGS
+      ══════════════════════════════════════════════════════════════ */}
+      <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
+        <h3 className="font-bold text-sm flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <span className="text-lg">🤖</span>
+          {isRtl ? 'إعدادات الذكاء الاصطناعي (AI Assistant)' : 'AI Assistant Configuration'}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Provider */}
+          <div>
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'المزود (Provider)' : 'Provider'}</label>
+            <select value={aiProvider} onChange={e => { setAiProvider(e.target.value); setAiModel(''); }}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+              {Object.entries(AI_MODELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
+          {/* Model */}
+          <div>
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'النموذج (Model)' : 'Model'}</label>
+            <select value={aiModel} onChange={e => setAiModel(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+              <option value="">{isRtl ? '— اختر النموذج —' : '— Select model —'}</option>
+              {AI_MODELS[aiProvider]?.models.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          {/* API Key */}
+          <div className="md:col-span-2">
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">
+              {isRtl ? 'مفتاح API' : 'API Key'}
+              {aiSaved && <span className="ml-2 text-emerald-500 text-[10px]">({isRtl ? 'محفوظ ومشفر' : 'Saved & Encrypted'})</span>}
+            </label>
+            <input
+              type="password"
+              placeholder={aiSaved ? '••••••••••••••••••••••••' : (isRtl ? 'sk-... أو مفتاح Google/Anthropic' : 'sk-... or Google/Anthropic key')}
+              value={aiKeyRaw}
+              onChange={e => setAiKeyRaw(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 font-mono"
+            />
+            {aiSaved && !aiKeyRaw && <p className="text-[10px] text-slate-400 mt-1">{isRtl ? 'المفتاح محفوظ. اكتب مفتاحاً جديداً لتغييره.' : 'Key is saved. Type a new key to update it.'}</p>}
+          </div>
+          {/* Base URL */}
+          <div className="md:col-span-2">
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'رابط الخادم (Base URL — اختياري)' : 'Base URL (Optional — for OpenRouter/Custom)'}</label>
+            <input
+              type="url"
+              placeholder="https://api.openai.com"
+              value={aiBaseUrl}
+              onChange={e => setAiBaseUrl(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 font-mono"
+            />
+          </div>
+        </div>
+
+        {/* Test Result banner */}
+        {aiTestResult !== 'idle' && (
+          <div className={`p-3 rounded-xl text-xs font-bold text-center border ${
+            aiTestResult === 'ok' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400'
+          }`}>
+            {aiTestResult === 'ok'
+              ? (isRtl ? '✓ الاتصال ناجح! المفتاح يعمل بشكل صحيح.' : '✓ Connection successful! Key is valid.')
+              : (isRtl ? '✗ فشل الاتصال. تحقق من المفتاح والمزود.' : '✗ Connection failed. Check your key and provider.')}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button onClick={handleTestAi} disabled={aiTesting}
+            className="px-4 py-2 rounded-xl border border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 text-xs font-bold hover:bg-blue-500/10 transition-all disabled:opacity-50 flex items-center gap-2">
+            {aiTesting ? <span className="animate-spin">⟳</span> : '🔌'}
+            {isRtl ? 'اختبار الاتصال' : 'Test Connection'}
+          </button>
+          <button onClick={handleSaveAi}
+            className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm">
+            {isRtl ? '💾 حفظ إعدادات AI' : '💾 Save AI Settings'}
+          </button>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          INVOICE / STORE SETTINGS
+      ══════════════════════════════════════════════════════════════ */}
+      <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
+        <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 className="font-bold text-sm flex items-center gap-1.5">
+            <span className="text-lg">🧾</span>
+            {isRtl ? 'إعدادات الفاتورة والمتجر' : 'Invoice & Store Settings'}
+          </h3>
+          {invSavedMsg && <span className="text-xs font-bold text-emerald-500 animate-fade-in">{invSavedMsg}</span>}
+        </div>
+
+        {/* Logo + Store Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2 flex items-center gap-4">
+            <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-900 shrink-0">
+              {storeLogo ? <img src={storeLogo} className="w-full h-full object-contain" alt="logo" /> : <span className="text-3xl">🏪</span>}
+            </div>
+            <div className="space-y-2 flex-1">
+              <p className="text-xs text-slate-400 font-bold">{isRtl ? 'شعار المتجر (Logo)' : 'Store Logo'}</p>
+              <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+              <button onClick={() => logoInputRef.current?.click()}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-2">
+                📷 {isRtl ? 'تغيير الشعار' : 'Upload Logo'}
+              </button>
+              {storeLogo && <button onClick={() => setStoreLogo('')} className="text-[10px] text-red-400 hover:underline">{isRtl ? 'حذف الشعار' : 'Remove Logo'}</button>}
+            </div>
+          </div>
+
+          {[{label: isRtl ? 'اسم المتجر' : 'Store Name', val: storeName, set: setStoreName, ph: isRtl ? 'مثال: متجر أبو علي' : 'e.g. My Store'},
+            {label: isRtl ? 'الرقم الضريبي (VAT)' : 'VAT Number', val: vatNumber, set: setVatNumber, ph: '312345678900003'},
+            {label: isRtl ? 'السجل التجاري' : 'Commercial Reg. No.', val: invCrNumber, set: setInvCrNumber, ph: '1010234567'},
+            {label: isRtl ? 'الهاتف الرئيسي' : 'Phone 1', val: storePhone, set: setStorePhone, ph: '+966501234567'},
+            {label: isRtl ? 'الهاتف الثاني' : 'Phone 2', val: invPhone2, set: setInvPhone2, ph: '+966502345678'},
+            {label: isRtl ? 'البريد الإلكتروني' : 'Email', val: invEmail, set: setInvEmail, ph: 'store@example.com'},
+            {label: isRtl ? 'الموقع الإلكتروني' : 'Website', val: invWebsite, set: setInvWebsite, ph: 'https://store.com'},
+            {label: isRtl ? 'العنوان' : 'Address', val: storeAddress, set: setStoreAddress, ph: isRtl ? 'الرياض، طريق الملك فهد' : 'Riyadh, King Fahd Road'},
+          ].map(({label, val, set, ph}) => (
+            <div key={label}>
+              <label className="text-xs text-slate-400 font-bold block mb-1.5">{label}</label>
+              <input type="text" placeholder={ph} value={val}
+                onChange={e => set(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+            </div>
+          ))}
+        </div>
+
+        {/* Receipt texts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'رسالة أسفل الفاتورة' : 'Receipt Footer'}</label>
+            <textarea rows={2} value={receiptFooter} onChange={e => setReceiptFooter(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'سياسة الإرجاع' : 'Return Policy'}</label>
+            <textarea rows={2} value={invReturnPolicy} onChange={e => setInvReturnPolicy(e.target.value)}
+              placeholder={isRtl ? 'مثال: لا يُقبل الإرجاع بعد 7 أيام' : 'e.g. No returns after 7 days'}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+          </div>
+        </div>
+
+        {/* Paper size + Color */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'حجم الورق' : 'Paper Size'}</label>
+            <div className="flex gap-2">
+              {['A4', '80mm', '58mm'].map(s => (
+                <button key={s} onClick={() => setInvPaperSize(s)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    invPaperSize === s ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}>{s}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'لون الفاتورة' : 'Invoice Color'}</label>
+            <div className="flex items-center gap-3">
+              <input type="color" value={invColor} onChange={e => setInvColor(e.target.value)}
+                className="w-12 h-10 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer" />
+              <span className="text-sm font-mono text-slate-500">{invColor}</span>
+              {['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#0f172a'].map(c => (
+                <button key={c} onClick={() => setInvColor(c)}
+                  style={{background: c}} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"/>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Show/Hide toggles */}
+        <div>
+          <p className="text-xs text-slate-400 font-bold mb-3">{isRtl ? 'عناصر الفاتورة (إظهار / إخفاء)' : 'Invoice Elements (Show / Hide)'}</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {[
+              {label: isRtl ? 'الشعار' : 'Logo', val: invShowLogo, set: setInvShowLogo},
+              {label: isRtl ? 'العنوان' : 'Address', val: invShowAddress, set: setInvShowAddress},
+              {label: isRtl ? 'الهاتف' : 'Phone', val: invShowPhone, set: setInvShowPhone},
+              {label: isRtl ? 'الضريبة' : 'Tax Line', val: invShowTax, set: setInvShowTax},
+              {label: isRtl ? 'رمز QR' : 'QR Code', val: invShowQr, set: setInvShowQr},
+              {label: isRtl ? 'السجل التجاري' : 'CR Number', val: invShowCr, set: setInvShowCr},
+            ].map(({label, val, set}) => (
+              <button key={label} onClick={() => set(!val)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
+                  val ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-700 text-slate-400'
+                }`}>
+                <span>{val ? '✓' : '○'}</span> {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button onClick={handleSaveInvoice}
+          className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-sm">
+          {isRtl ? '💾 حفظ إعدادات الفاتورة' : '💾 Save Invoice Settings'}
+        </button>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          CHART OF ACCOUNTS
+      ══════════════════════════════════════════════════════════════ */}
+      {currentUser?.role === 'owner' && (
+        <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
+          <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+            <h3 className="font-bold text-sm flex items-center gap-1.5">
+              <span className="text-lg">📊</span>
+              {isRtl ? 'شجرة الحسابات (دليل الحسابات)' : 'Chart of Accounts'}
+            </h3>
+            <div className="flex gap-2">
+              <button onClick={handleExportAccounts}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                📥 {isRtl ? 'تصدير CSV' : 'Export CSV'}
+              </button>
+              <label className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                📤 {isRtl ? 'استيراد JSON' : 'Import JSON'}
+                <input type="file" accept=".json" className="hidden" onChange={handleImportAccounts} />
+              </label>
+              <button onClick={() => { setAccForm({ code: '', name_ar: '', name_en: '', type: 'asset', parent: '' }); setEditingAccId(null); setShowAccForm(true); }}
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm">
+                + {isRtl ? 'إضافة حساب' : 'Add Account'}
+              </button>
+            </div>
+          </div>
+
+          {/* Add/Edit Form */}
+          {showAccForm && (
+            <div className="p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 space-y-3 animate-fade-in">
+              <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                {editingAccId ? (isRtl ? 'تعديل الحساب' : 'Edit Account') : (isRtl ? 'إضافة حساب جديد' : 'New Account')}
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 font-bold block mb-1">{isRtl ? 'رقم الحساب *' : 'Code *'}</label>
+                  <input type="text" placeholder="1001" value={accForm.code} onChange={e => setAccForm(p => ({...p, code: e.target.value}))}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-mono focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 font-bold block mb-1">{isRtl ? 'اسم الحساب بالعربي *' : 'Name (Arabic) *'}</label>
+                  <input type="text" placeholder={isRtl ? 'مثال: النقدية' : 'e.g. النقدية'} value={accForm.name_ar} onChange={e => setAccForm(p => ({...p, name_ar: e.target.value}))}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 font-bold block mb-1">{isRtl ? 'الاسم بالإنجليزي' : 'Name (English)'}</label>
+                  <input type="text" placeholder="Cash" value={accForm.name_en} onChange={e => setAccForm(p => ({...p, name_en: e.target.value}))}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 font-bold block mb-1">{isRtl ? 'نوع الحساب' : 'Type'}</label>
+                  <select value={accForm.type} onChange={e => setAccForm(p => ({...p, type: e.target.value}))}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs focus:outline-none">
+                    <option value="asset">{isRtl ? 'أصول' : 'Asset'}</option>
+                    <option value="liability">{isRtl ? 'التزامات' : 'Liability'}</option>
+                    <option value="equity">{isRtl ? 'حقوق ملكية' : 'Equity'}</option>
+                    <option value="revenue">{isRtl ? 'إيرادات' : 'Revenue'}</option>
+                    <option value="expense">{isRtl ? 'مصروفات' : 'Expense'}</option>
+                  </select>
+                </div>
+                <div className="md:col-span-4">
+                  <label className="text-[10px] text-slate-400 font-bold block mb-1">{isRtl ? 'الحساب الرئيسي (اختياري)' : 'Parent Account (Optional)'}</label>
+                  <input type="text" placeholder={isRtl ? 'رقم الحساب الأب مثل: 1000' : 'Parent code e.g. 1000'} value={accForm.parent} onChange={e => setAccForm(p => ({...p, parent: e.target.value}))}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs focus:outline-none" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleSaveAccount}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm">
+                  {isRtl ? '✓ حفظ' : '✓ Save'}
+                </button>
+                <button onClick={() => { setShowAccForm(false); setEditingAccId(null); }}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">
+                  {isRtl ? 'إلغاء' : 'Cancel'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Search */}
+          <input type="text" placeholder={isRtl ? '🔍 بحث في الحسابات...' : '🔍 Search accounts...'}
+            value={accSearch} onChange={e => setAccSearch(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none" />
+
+          {/* Accounts table */}
+          {accounts.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <div className="text-4xl mb-2">📋</div>
+              <p className="text-sm font-bold">{isRtl ? 'لا توجد حسابات بعد' : 'No accounts yet'}</p>
+              <p className="text-xs mt-1">{isRtl ? 'اضغط "إضافة حساب" لإنشاء دليل الحسابات' : 'Click "Add Account" to build your chart of accounts'}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className={`py-2 font-bold text-slate-400 ${isRtl ? 'text-right' : 'text-left'}`}>{isRtl ? 'رقم' : 'Code'}</th>
+                    <th className={`py-2 font-bold text-slate-400 ${isRtl ? 'text-right' : 'text-left'}`}>{isRtl ? 'الاسم' : 'Name'}</th>
+                    <th className={`py-2 font-bold text-slate-400 ${isRtl ? 'text-right' : 'text-left'} hidden md:table-cell`}>{isRtl ? 'النوع' : 'Type'}</th>
+                    <th className={`py-2 font-bold text-slate-400 ${isRtl ? 'text-right' : 'text-left'} hidden md:table-cell`}>{isRtl ? 'الأب' : 'Parent'}</th>
+                    <th className="py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {accounts.filter(a => !accSearch || a.code.includes(accSearch) || a.name_ar.includes(accSearch) || a.name_en.toLowerCase().includes(accSearch.toLowerCase())).map(a => (
+                    <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="py-2 font-mono font-bold text-blue-500">{a.code}</td>
+                      <td className="py-2">
+                        <div className="font-bold">{a.name_ar}</div>
+                        {a.name_en && <div className="text-slate-400 text-[10px]">{a.name_en}</div>}
+                      </td>
+                      <td className="py-2 hidden md:table-cell">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          a.type === 'asset' ? 'bg-blue-500/10 text-blue-600' :
+                          a.type === 'liability' ? 'bg-red-500/10 text-red-600' :
+                          a.type === 'equity' ? 'bg-purple-500/10 text-purple-600' :
+                          a.type === 'revenue' ? 'bg-emerald-500/10 text-emerald-600' :
+                          'bg-amber-500/10 text-amber-600'
+                        }`}>
+                          {isRtl
+                            ? {asset:'أصول',liability:'التزامات',equity:'حقوق ملكية',revenue:'إيرادات',expense:'مصروفات'}[a.type]
+                            : a.type}
+                        </span>
+                      </td>
+                      <td className="py-2 font-mono text-slate-400 hidden md:table-cell">{a.parent || '—'}</td>
+                      <td className="py-2">
+                        <div className="flex gap-1 justify-end">
+                          <button onClick={() => { setAccForm({code:a.code,name_ar:a.name_ar,name_en:a.name_en,type:a.type,parent:a.parent}); setEditingAccId(a.id); setShowAccForm(true); }}
+                            className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-colors">✏️</button>
+                          <button onClick={() => handleDeleteAccount(a.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors">🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 };

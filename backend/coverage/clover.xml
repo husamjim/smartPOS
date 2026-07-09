@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1783530076118" clover="3.2.0">
+  <project timestamp="1783530076118" name="All files">
+    <metrics statements="145" coveredstatements="134" conditionals="60" coveredconditionals="44" methods="24" coveredmethods="22" elements="229" coveredelements="200" complexity="0" loc="145" ncloc="145" packages="3" files="4" classes="4"/>
+    <package name="config">
+      <metrics statements="30" coveredstatements="26" conditionals="13" coveredconditionals="9" methods="6" coveredmethods="5"/>
+      <file name="db.ts" path="C:\Users\AM 2024\Downloads\معرض المشاريع\cashier system\backend\src\config\db.ts">
+        <metrics statements="30" coveredstatements="26" conditionals="13" coveredconditionals="9" methods="6" coveredmethods="5"/>
+        <line num="13" count="3" type="stmt"/>
+        <line num="14" count="3" type="stmt"/>
+        <line num="15" count="3" type="stmt"/>
+        <line num="16" count="3" type="stmt"/>
+        <line num="17" count="3" type="stmt"/>
+        <line num="18" count="3" type="stmt"/>
+        <line num="20" count="3" type="stmt"/>
+        <line num="22" count="3" type="cond" truecount="2" falsecount="2"/>
+        <line num="23" count="3" type="stmt"/>
+        <line num="24" count="3" type="stmt"/>
+        <line num="27" count="3" type="stmt"/>
+        <line num="38" count="3" type="stmt"/>
+        <line num="80" count="3" type="stmt"/>
+        <line num="87" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="88" count="3" type="stmt"/>
+        <line num="89" count="3" type="stmt"/>
+        <line num="90" count="3" type="stmt"/>
+        <line num="95" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="119" count="0" type="stmt"/>
+        <line num="123" count="3" type="stmt"/>
+        <line num="149" count="0" type="stmt"/>
+        <line num="153" count="3" type="stmt"/>
+        <line num="154" count="1" type="stmt"/>
+        <line num="155" count="1" type="stmt"/>
+        <line num="168" count="0" type="stmt"/>
+        <line num="170" count="0" type="stmt"/>
+        <line num="176" count="3" type="cond" truecount="0" falsecount="1"/>
+        <line num="178" count="3" type="stmt"/>
+        <line num="354" count="3" type="stmt"/>
+        <line num="396" count="3" type="stmt"/>
+      </file>
+    </package>
+    <package name="controllers">
+      <metrics statements="79" coveredstatements="73" conditionals="25" coveredconditionals="17" methods="6" coveredmethods="6"/>
+      <file name="authController.ts" path="C:\Users\AM 2024\Downloads\معرض المشاريع\cashier system\backend\src\controllers\authController.ts">
+        <metrics statements="79" coveredstatements="73" conditionals="25" coveredconditionals="17" methods="6" coveredmethods="6"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="19" count="1" type="stmt"/>
+        <line num="32" count="1" type="stmt"/>
+        <line num="35" count="1" type="stmt"/>
+        <line num="39" count="11" type="cond" truecount="1" falsecount="0"/>
+        <line num="40" count="10" type="cond" truecount="0" falsecount="1"/>
+        <line num="41" count="10" type="cond" truecount="0" falsecount="1"/>
+        <line num="42" count="10" type="stmt"/>
+        <line num="46" count="22" type="cond" truecount="2" falsecount="1"/>
+        <line num="52" count="1" type="stmt"/>
+        <line num="53" count="7" type="stmt"/>
+        <line num="55" count="7" type="cond" truecount="2" falsecount="1"/>
+        <line num="56" count="0" type="stmt"/>
+        <line num="60" count="7" type="cond" truecount="0" falsecount="1"/>
+        <line num="61" count="0" type="stmt"/>
+        <line num="64" count="7" type="stmt"/>
+        <line num="66" count="7" type="stmt"/>
+        <line num="71" count="7" type="cond" truecount="1" falsecount="0"/>
+        <line num="73" count="1" type="stmt"/>
+        <line num="74" count="1" type="stmt"/>
+        <line num="77" count="6" type="stmt"/>
+        <line num="78" count="6" type="stmt"/>
+        <line num="80" count="6" type="cond" truecount="1" falsecount="0"/>
+        <line num="81" count="1" type="stmt"/>
+        <line num="82" count="1" type="stmt"/>
+        <line num="85" count="5" type="stmt"/>
+        <line num="87" count="5" type="stmt"/>
+        <line num="88" count="5" type="stmt"/>
+        <line num="91" count="5" type="stmt"/>
+        <line num="92" count="5" type="stmt"/>
+        <line num="93" count="5" type="stmt"/>
+        <line num="94" count="5" type="stmt"/>
+        <line num="104" count="5" type="stmt"/>
+        <line num="106" count="5" type="stmt"/>
+        <line num="121" count="1" type="stmt"/>
+        <line num="122" count="12" type="stmt"/>
+        <line num="124" count="12" type="cond" truecount="5" falsecount="1"/>
+        <line num="125" count="0" type="stmt"/>
+        <line num="129" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="130" count="1" type="stmt"/>
+        <line num="134" count="11" type="stmt"/>
+        <line num="135" count="11" type="cond" truecount="1" falsecount="0"/>
+        <line num="136" count="1" type="stmt"/>
+        <line num="140" count="10" type="cond" truecount="1" falsecount="0"/>
+        <line num="141" count="1" type="stmt"/>
+        <line num="144" count="9" type="stmt"/>
+        <line num="145" count="9" type="stmt"/>
+        <line num="146" count="9" type="cond" truecount="1" falsecount="0"/>
+        <line num="147" count="1" type="stmt"/>
+        <line num="151" count="8" type="stmt"/>
+        <line num="153" count="8" type="stmt"/>
+        <line num="155" count="8" type="stmt"/>
+        <line num="160" count="8" type="stmt"/>
+        <line num="161" count="8" type="stmt"/>
+        <line num="171" count="1" type="stmt"/>
+        <line num="172" count="2" type="stmt"/>
+        <line num="174" count="2" type="cond" truecount="0" falsecount="1"/>
+        <line num="175" count="0" type="stmt"/>
+        <line num="180" count="2" type="stmt"/>
+        <line num="181" count="2" type="stmt"/>
+        <line num="183" count="1" type="stmt"/>
+        <line num="184" count="1" type="stmt"/>
+        <line num="188" count="1" type="stmt"/>
+        <line num="189" count="1" type="stmt"/>
+        <line num="194" count="1" type="cond" truecount="0" falsecount="1"/>
+        <line num="195" count="0" type="stmt"/>
+        <line num="196" count="0" type="stmt"/>
+        <line num="203" count="1" type="stmt"/>
+        <line num="209" count="1" type="stmt"/>
+        <line num="213" count="1" type="stmt"/>
+        <line num="214" count="1" type="stmt"/>
+        <line num="216" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="217" count="1" type="stmt"/>
+        <line num="219" count="1" type="stmt"/>
+        <line num="226" count="1" type="stmt"/>
+        <line num="227" count="1" type="stmt"/>
+      </file>
+    </package>
+    <package name="middleware">
+      <metrics statements="36" coveredstatements="35" conditionals="22" coveredconditionals="18" methods="12" coveredmethods="11"/>
+      <file name="auth.ts" path="C:\Users\AM 2024\Downloads\معرض المشاريع\cashier system\backend\src\middleware\auth.ts">
+        <metrics statements="17" coveredstatements="17" conditionals="11" coveredconditionals="9" methods="4" coveredmethods="4"/>
+        <line num="9" count="2" type="stmt"/>
+        <line num="28" count="2" type="stmt"/>
+        <line num="29" count="8" type="stmt"/>
+        <line num="30" count="8" type="cond" truecount="2" falsecount="0"/>
+        <line num="33" count="8" type="cond" truecount="1" falsecount="0"/>
+        <line num="34" count="2" type="stmt"/>
+        <line num="37" count="6" type="stmt"/>
+        <line num="38" count="6" type="cond" truecount="1" falsecount="0"/>
+        <line num="40" count="1" type="stmt"/>
+        <line num="41" count="1" type="stmt"/>
+        <line num="46" count="5" type="stmt"/>
+        <line num="47" count="5" type="stmt"/>
+        <line num="51" count="2" type="stmt"/>
+        <line num="52" count="1" type="stmt"/>
+        <line num="53" count="2" type="cond" truecount="3" falsecount="0"/>
+        <line num="54" count="1" type="stmt"/>
+        <line num="56" count="1" type="stmt"/>
+      </file>
+      <file name="logger.ts" path="C:\Users\AM 2024\Downloads\معرض المشاريع\cashier system\backend\src\middleware\logger.ts">
+        <metrics statements="19" coveredstatements="18" conditionals="11" coveredconditionals="9" methods="8" coveredmethods="7"/>
+        <line num="23" count="57" type="stmt"/>
+        <line num="30" count="57" type="stmt"/>
+        <line num="33" count="3" type="stmt"/>
+        <line num="34" count="0" type="stmt"/>
+        <line num="35" count="42" type="stmt"/>
+        <line num="36" count="13" type="stmt"/>
+        <line num="37" count="2" type="stmt"/>
+        <line num="41" count="3" type="stmt"/>
+        <line num="42" count="27" type="stmt"/>
+        <line num="43" count="27" type="cond" truecount="2" falsecount="0"/>
+        <line num="46" count="27" type="stmt"/>
+        <line num="47" count="27" type="stmt"/>
+        <line num="48" count="27" type="cond" truecount="2" falsecount="0"/>
+        <line num="52" count="27" type="stmt"/>
+        <line num="62" count="27" type="stmt"/>
+        <line num="66" count="3" type="stmt"/>
+        <line num="67" count="1" type="stmt"/>
+        <line num="75" count="1" type="stmt"/>
+        <line num="76" count="1" type="stmt"/>
+      </file>
+    </package>
+  </project>
+</coverage>

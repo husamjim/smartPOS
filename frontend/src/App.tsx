@@ -67,6 +67,16 @@ export default function App() {
   const [landingView, setLandingView] = useState<'landing' | 'login' | 'signup' | 'otp'>('landing');
   const [showWelcome, setShowWelcome] = useState(!localStorage.getItem('smartpos_first_run_done'));
 
+  // Setup Wizard state — shown when no users exist in localStorage
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [wizardStep, setWizardStep] = useState<1 | 2>(1);
+  const [wizardName, setWizardName] = useState('');
+  const [wizardUsername, setWizardUsername] = useState('');
+  const [wizardPassword, setWizardPassword] = useState('');
+  const [wizardConfirm, setWizardConfirm] = useState('');
+  const [wizardError, setWizardError] = useState('');
+  const [wizardDone, setWizardDone] = useState(false);
+
   // Login form local states
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -355,15 +365,21 @@ export default function App() {
                   onClick={() => setLandingView('signup')} 
                   className="text-xs text-blue-500 hover:underline font-bold"
                 >
-                  {isRtl ? 'تسجيل عميل جديد (حساب تجاري)' : 'Register New Merchant Account'}
+                  {isRtl ? 'تسجيل حساب تجاري جديد' : 'Register New Merchant Account'}
                 </button>
               </div>
 
-              <div className="border-t pt-3 text-[10px] text-slate-400 text-center space-y-1 font-mono">
-                <div>💡 {isRtl ? 'الحسابات الافتراضية للتجربة:' : 'Seeded demo credentials:'}</div>
-                <div>owner / owner123 (صلاحيات كاملة)</div>
-                <div>cashier / cashier123 (بيع فقط)</div>
-              </div>
+              {/* First-run: show Setup Wizard link */}
+              {!localStorage.getItem('pos_users') && (
+                <div className="border-t pt-3 text-center">
+                  <button
+                    onClick={() => setShowSetupWizard(true)}
+                    className="text-xs text-emerald-500 hover:underline font-bold flex items-center gap-1.5 mx-auto"
+                  >
+                    ✨ {isRtl ? 'إعداد أول حساب للمالك' : 'First-Time Setup Wizard'}
+                  </button>
+                </div>
+              )}
             </>
           )}
 
@@ -661,13 +677,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Business switcher button */}
-            <button
-              onClick={() => setBusinessType(null)}
-              className="px-3 py-1.5 rounded-xl border border-amber-500/15 bg-amber-500/5 text-amber-500 text-xs font-bold hover:bg-amber-500/10 transition-all flex items-center gap-1.5"
-            >
-              🔄 {isRtl ? 'تغيير النشاط' : 'Switch Profile'}
-            </button>
 
             {/* Devices controller link shortcut */}
             {import.meta.env.DEV && (
@@ -836,6 +845,144 @@ export default function App() {
                 إغلاق
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Setup Wizard Modal (First-Time Owner Setup) ─────────────────────── */}
+      {showSetupWizard && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="glass-card p-8 rounded-3xl max-w-md w-full space-y-6 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl relative overflow-hidden animate-fade-in">
+            {/* Glow decorations */}
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                ⚙️
+              </div>
+              <h2 className="text-xl font-extrabold bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent font-sans">
+                {isRtl ? 'إعداد النظام الأول' : 'First-Time Setup'}
+              </h2>
+              <p className="text-xs text-slate-400">
+                {isRtl ? 'أنشئ حساب المالك الرئيسي لبدء استخدام النظام' : 'Create the owner account to start using the system'}
+              </p>
+            </div>
+
+            {/* Progress steps */}
+            <div className="flex items-center gap-2 justify-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizardStep >= 1 ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 text-slate-400'}`}>1</div>
+              <div className={`flex-1 h-0.5 ${wizardStep >= 2 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`} />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizardStep >= 2 ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 dark:border-slate-700 text-slate-400'}`}>2</div>
+            </div>
+
+            {wizardError && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
+                ⚠️ {wizardError}
+              </div>
+            )}
+
+            {wizardDone ? (
+              <div className="text-center space-y-3 py-4">
+                <div className="text-5xl animate-bounce">✅</div>
+                <p className="text-sm font-bold text-emerald-500">{isRtl ? 'تم إنشاء الحساب بنجاح!' : 'Account created successfully!'}</p>
+                <p className="text-xs text-slate-400">{isRtl ? 'جاري تسجيل الدخول...' : 'Logging you in...'}</p>
+              </div>
+            ) : wizardStep === 1 ? (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!wizardName.trim() || !wizardUsername.trim()) {
+                  setWizardError(isRtl ? 'الرجاء ملء جميع الحقول' : 'Please fill all fields');
+                  return;
+                }
+                setWizardError('');
+                setWizardStep(2);
+              }} className="space-y-4">
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'الاسم الكامل' : 'Full Name'}</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={isRtl ? 'مثال: أحمد محمد' : 'e.g. John Smith'}
+                    value={wizardName}
+                    onChange={e => setWizardName(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
+                  />
+                </div>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'اسم المستخدم (للدخول)' : 'Username (for login)'}</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={isRtl ? 'مثال: admin أو owner' : 'e.g. admin or owner'}
+                    value={wizardUsername}
+                    onChange={e => setWizardUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm font-mono"
+                  />
+                </div>
+                <button type="submit" className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:opacity-90 text-white font-bold text-sm shadow-md transition-all">
+                  {isRtl ? 'التالي ←' : 'Next →'}
+                </button>
+                <button type="button" onClick={() => setShowSetupWizard(false)} className="w-full py-2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  {isRtl ? 'إلغاء' : 'Cancel'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (wizardPassword.length < 6) {
+                  setWizardError(isRtl ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+                  return;
+                }
+                if (wizardPassword !== wizardConfirm) {
+                  setWizardError(isRtl ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match');
+                  return;
+                }
+                setWizardError('');
+                addUser({ username: wizardUsername, displayName: wizardName, role: 'owner', password: wizardPassword, active: true });
+                setWizardDone(true);
+                setTimeout(() => {
+                  setShowSetupWizard(false);
+                  setWizardDone(false);
+                  setWizardStep(1);
+                  setLoginUsername(wizardUsername);
+                  setLoginPassword(wizardPassword);
+                  setLandingView('login');
+                }, 1800);
+              }} className="space-y-4">
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'كلمة المرور' : 'Password'}</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={wizardPassword}
+                    onChange={e => setWizardPassword(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
+                  />
+                </div>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'تأكيد كلمة المرور' : 'Confirm Password'}</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={wizardConfirm}
+                    onChange={e => setWizardConfirm(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setWizardStep(1)} className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                    {isRtl ? '→ رجوع' : '← Back'}
+                  </button>
+                  <button type="submit" className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:opacity-90 text-white font-bold text-sm shadow-md transition-all">
+                    {isRtl ? '✓ إنشاء الحساب والدخول' : '✓ Create Account & Login'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
