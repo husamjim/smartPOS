@@ -28,23 +28,18 @@
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64"] }
-      ],
-      "icon": "electron/assets/icon.ico"
+      ]
     },
     "mac": {
-      "target": "dmg",
-      "icon": "electron/assets/icon.icns"
+      "target": "dmg"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "electron/assets/icon.png",
       "category": "Office"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "electron/assets/icon.ico",
-      "installerHeaderIcon": "electron/assets/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
