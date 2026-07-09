@@ -1010,38 +1010,40 @@ export const Settings: React.FC = () => {
       )}
 
       {/* Diagnostics / Testing block */}
-      <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
-        <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
-          <Database className="h-4.5 w-4.5 text-amber-500" />
-          {isRtl ? 'أدوات التشخيص والاختبار' : 'Diagnostics & System Actions'}
-        </h3>
+      {import.meta.env.DEV && (
+        <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
+          <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
+            <Database className="h-4.5 w-4.5 text-amber-500" />
+            {isRtl ? 'أدوات التشخيص والاختبار' : 'Diagnostics & System Actions'}
+          </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button
-            onClick={handleTestPrint}
-            className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs flex flex-col items-center gap-2 transition-all shadow-xs"
-          >
-            <Printer className="h-5 w-5 text-indigo-500" />
-            {isRtl ? 'طباعة فاتورة تجريبية' : 'Test Receipt Print'}
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              onClick={handleTestPrint}
+              className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs flex flex-col items-center gap-2 transition-all shadow-xs"
+            >
+              <Printer className="h-5 w-5 text-indigo-500" />
+              {isRtl ? 'طباعة فاتورة تجريبية' : 'Test Receipt Print'}
+            </button>
 
-          <button
-            onClick={handleTestDrawer}
-            className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs flex flex-col items-center gap-2 transition-all shadow-xs"
-          >
-            <span className="text-xl">💰</span>
-            {isRtl ? 'فتح اختبار درج الكاش' : 'Test Open Cash Drawer'}
-          </button>
+            <button
+              onClick={handleTestDrawer}
+              className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs flex flex-col items-center gap-2 transition-all shadow-xs"
+            >
+              <span className="text-xl">💰</span>
+              {isRtl ? 'فتح اختبار درج الكاش' : 'Test Open Cash Drawer'}
+            </button>
 
-          <button
-            onClick={handleResetDatabase}
-            className="p-3 rounded-xl border border-red-500/10 bg-red-500/5 hover:bg-red-500/10 font-bold text-xs text-red-600 dark:text-red-400 flex flex-col items-center gap-2 transition-all shadow-xs"
-          >
-            <Database className="h-5 w-5" />
-            {isRtl ? 'مسح وتهيئة قاعدة البيانات' : 'Format IndexedDB'}
-          </button>
+            <button
+              onClick={handleResetDatabase}
+              className="p-3 rounded-xl border border-red-500/10 bg-red-500/5 hover:bg-red-500/10 font-bold text-xs text-red-600 dark:text-red-400 flex flex-col items-center gap-2 transition-all shadow-xs"
+            >
+              <Database className="h-5 w-5" />
+              {isRtl ? 'مسح وتهيئة قاعدة البيانات' : 'Format IndexedDB'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

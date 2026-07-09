@@ -34,6 +34,8 @@ export const Dashboard: React.FC = () => {
     customersCount: 0,
     lowStockCount: 0
   });
+  const [hourlySales, setHourlySales] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [branchSales, setBranchSales] = useState<number[]>([0, 0]);
   const [criticalItems, setCriticalItems] = useState<any[]>([]);
 
   useEffect(() => {
@@ -47,6 +49,30 @@ export const Dashboard: React.FC = () => {
     const todayOrders = orders.filter(o => o.created_at.startsWith(todayStr));
     const salesToday = todayOrders.reduce((sum, o) => sum + o.total, 0);
 
+    // Dynamic hourly chart distribution
+    const hourlySalesData = [0, 0, 0, 0, 0, 0, 0];
+    const branchSalesData = [0, 0];
+
+    for (const o of todayOrders) {
+      const date = new Date(o.created_at);
+      const hour = date.getHours();
+      if (hour < 10) hourlySalesData[0] += o.total;
+      else if (hour < 12) hourlySalesData[1] += o.total;
+      else if (hour < 14) hourlySalesData[2] += o.total;
+      else if (hour < 16) hourlySalesData[3] += o.total;
+      else if (hour < 18) hourlySalesData[4] += o.total;
+      else if (hour < 20) hourlySalesData[5] += o.total;
+      else hourlySalesData[6] += o.total;
+
+      if (o.branch_id === 'br_jeddah_mall') {
+        branchSalesData[1] += o.total;
+      } else {
+        branchSalesData[0] += o.total;
+      }
+    }
+    setHourlySales(hourlySalesData);
+    setBranchSales(branchSalesData);
+
     // Counts
     const customersCount = await db.customers.count();
     const products = await db.products.toArray();
@@ -57,7 +83,6 @@ export const Dashboard: React.FC = () => {
     
     for (const p of products) {
       const prodName = isRtl ? p.name_ar : p.name_en;
-      // For pharmacy items check batches
       if (p.is_pharmaceutical) {
         const productBatches = await db.batches.where('product_id').equals(p.id).toArray();
         const totalQty = productBatches.reduce((s, b) => s + b.quantity, 0);
@@ -70,9 +95,8 @@ export const Dashboard: React.FC = () => {
           });
         }
 
-        // Expiry check
         const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 30); // 30 days window
+        tomorrow.setDate(tomorrow.getDate() + 30);
         const nearExpiryBatches = productBatches.filter(b => b.expiry_date && new Date(b.expiry_date) <= tomorrow);
         if (nearExpiryBatches.length > 0) {
           itemsWithWarnings.push({ 
@@ -84,8 +108,7 @@ export const Dashboard: React.FC = () => {
           });
         }
       } else {
-        // Standard items
-        const qty = p.stock !== undefined ? p.stock : 0; // standard zero default stock
+        const qty = p.stock !== undefined ? p.stock : 0;
         if (qty <= p.min_stock) {
           lowStockCount++;
           itemsWithWarnings.push({ 
@@ -116,7 +139,7 @@ export const Dashboard: React.FC = () => {
       {
         fill: true,
         label: isRtl ? 'مبيعات اليوم (ريال)' : 'Today Sales (SAR)',
-        data: [120, 450, 780, 1100, 1500, 2100, 2480],
+        data: hourlySales,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         tension: 0.4
@@ -129,7 +152,7 @@ export const Dashboard: React.FC = () => {
     datasets: [
       {
         label: isRtl ? 'المبيعات الكلية' : 'Total Revenue',
-        data: [15400, 9800],
+        data: branchSales,
         backgroundColor: ['#3b82f6', '#10b981'],
         borderRadius: 8
       }
@@ -267,8 +290,8 @@ export const Dashboard: React.FC = () => {
             {isRtl ? 'التحذيرات النشطة في المستودع' : 'Active Stock & Expiry Violations'}
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {criticalItems.map((item, idx) => (
-              <div key={idx} className="p-3 rounded-xl bg-white/40 dark:bg-slate-900/40 text-xs border border-red-500/10">
+            {criticalItems.map((item: any, idx: number) => (
+              <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-900 text-xs border border-red-500/10 shadow-xs">
                 <div className="font-bold mb-1">{item.name}</div>
                 <div className="text-slate-500 dark:text-slate-400">{item.reason}</div>
               </div>

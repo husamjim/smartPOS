@@ -612,12 +612,14 @@ export default function App() {
             </button>
 
             {/* Devices controller link shortcut */}
-            <button
-              onClick={() => setShowHardwareSim(!showHardwareSim)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-all shadow-xs"
-            >
-              🖥️ {isRtl ? 'محاكي الأجهزة' : 'Devices Emulator'}
-            </button>
+            {import.meta.env.DEV && (
+              <button
+                onClick={() => setShowHardwareSim(!showHardwareSim)}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-all shadow-xs"
+              >
+                🖥️ {isRtl ? 'محاكي الأجهزة' : 'Devices Emulator'}
+              </button>
+            )}
 
             {/* Language switches */}
             <button
@@ -659,7 +661,7 @@ export default function App() {
       </div>
 
       {/* Floating Hardware Simulator panel */}
-      {showHardwareSim && (
+      {import.meta.env.DEV && showHardwareSim && (
         <div className={`fixed bottom-4 z-40 bg-slate-900 text-white p-5 rounded-2xl shadow-2xl w-80 space-y-4 border border-slate-700 font-sans transition-all animate-fade-in ${isRtl ? 'left-4' : 'right-4'}`}>
           <div className="flex justify-between items-center border-b border-slate-700 pb-2">
             <h4 className="font-extrabold text-sm flex items-center gap-1.5">

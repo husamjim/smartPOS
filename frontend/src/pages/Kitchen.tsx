@@ -35,49 +35,73 @@ export const Kitchen: React.FC = () => {
   }, []);
 
   const loadKitchenOrders = async () => {
-    // Look at orders today, find those containing restaurant items
     const localOrders = await db.orders.toArray();
     const localOrderItems = await db.orderItems.toArray();
     const products = await db.products.toArray();
+    const suspendedOrders = await db.suspendedOrders.toArray();
 
     const kitchenList: KitchenOrder[] = [];
-
-    // Filter today's completed orders
     const todayStr = new Date().toISOString().slice(0, 10);
-    const todayOrders = localOrders.filter(o => o.created_at.startsWith(todayStr) && o.status === 'completed');
 
+    // 1. Process completed orders
+    const todayOrders = localOrders.filter(o => o.created_at.startsWith(todayStr) && o.status === 'completed');
     for (const o of todayOrders) {
       const oItems = localOrderItems.filter(item => item.order_id === o.id);
       const foodItems = [];
 
       for (const oItem of oItems) {
         const prod = products.find(p => p.id === oItem.product_id);
-        if (prod && prod.category === 'Restaurant') {
-          // Mock order note logic
-          let mockNote = '';
-          if (prod.id === 'p_4') mockNote = 'بدون بصل، جبنة زيادة';
-          if (prod.id === 'p_5') mockNote = 'شطة زيادة';
-
+        if (prod && (prod.category === 'Restaurant' || prod.category === 'meal' || prod.category === 'sandwich' || prod.category === 'drink' || prod.category === 'dessert')) {
           foodItems.push({
             name_ar: prod.name_ar,
             name_en: prod.name_en,
             quantity: oItem.quantity,
-            notes: mockNote || undefined
+            notes: undefined
           });
         }
       }
 
       if (foodItems.length > 0) {
-        // Simple mock status logic
         kitchenList.push({
           id: o.id,
           invoice_number: o.invoice_number,
-          table_number: o.invoice_number.endsWith('1') || o.invoice_number.endsWith('3') ? 'Table 5' : undefined,
-          type: o.invoice_number.endsWith('1') || o.invoice_number.endsWith('3') ? 'dine_in' : 'takeaway',
+          table_number: o.table_number || undefined,
+          type: o.table_number ? 'dine_in' : 'takeaway',
           items: foodItems,
           status: 'pending',
           created_at: o.created_at,
-          elapsed: Math.floor((new Date().getTime() - new Date(o.created_at).getTime()) / 60000)
+          elapsed: Math.max(0, Math.floor((new Date().getTime() - new Date(o.created_at).getTime()) / 60000))
+        });
+      }
+    }
+
+    // 2. Process active suspended table bills
+    const todaySuspended = suspendedOrders.filter(o => o.date.startsWith(todayStr));
+    for (const o of todaySuspended) {
+      const foodItems = [];
+
+      for (const item of o.items) {
+        const prod = products.find(p => p.id === item.product.id);
+        if (prod && (prod.category === 'Restaurant' || prod.category === 'meal' || prod.category === 'sandwich' || prod.category === 'drink' || prod.category === 'dessert')) {
+          foodItems.push({
+            name_ar: prod.name_ar,
+            name_en: prod.name_en,
+            quantity: item.quantity,
+            notes: undefined
+          });
+        }
+      }
+
+      if (foodItems.length > 0) {
+        kitchenList.push({
+          id: o.id,
+          invoice_number: o.invoice_number,
+          table_number: o.table_number || undefined,
+          type: o.table_number ? 'dine_in' : 'takeaway',
+          items: foodItems,
+          status: 'preparing',
+          created_at: o.date,
+          elapsed: Math.max(0, Math.floor((new Date().getTime() - new Date(o.date).getTime()) / 60000))
         });
       }
     }

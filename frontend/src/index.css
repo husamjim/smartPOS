@@ -9,6 +9,9 @@
   body {
     @apply bg-slate-50 text-slate-900 transition-colors duration-300 font-sans;
     font-family: 'Inter', 'Cairo', sans-serif;
+    line-height: 1.625;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body.dark {
@@ -16,38 +19,87 @@
   }
 }
 
-/* Glassmorphism Styles */
+/* Card and Container Styles (Opaque for Production RC Stability) */
 .glass-card {
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .dark .glass-card {
-  background: rgba(15, 23, 42, 0.98);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* Glass Panels with Glows */
-.neon-glow-blue {
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+/* Focus outlines & Hover styles (Stripe / Notion aesthetics) */
+input, select, textarea {
+  outline: none;
+  transition: all 0.2s ease-in-out;
 }
 
-.dark .neon-glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+body:not(.dark) input,
+body:not(.dark) select,
+body:not(.dark) textarea {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
-.neon-glow-green {
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+body:not(.dark) input:focus,
+body:not(.dark) select:focus,
+body:not(.dark) textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
-.dark .neon-glow-green {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+body:not(.dark) button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Day Mode glare reduction and card outlines */
+body:not(.dark) .bg-white\/40,
+body:not(.dark) .bg-white\/30,
+body:not(.dark) .bg-white\/20,
+body:not(.dark) .bg-white\/10,
+body:not(.dark) .bg-white\/50 {
+  background-color: #ffffff !important;
+}
+
+body:not(.dark) .bg-slate-150\/50,
+body:not(.dark) .bg-slate-100\/50 {
+  background-color: #f1f5f9 !important;
+}
+
+body:not(.dark) .border-slate-200\/50 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Enforcing 100% Opaque backgrounds on Modals, Dialogs, Dropdowns, Popovers, Side Panels, Menus */
+.fixed.inset-0.bg-slate-950\/70,
+.fixed.inset-0.bg-slate-950\/80 {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.modal-content, [role="dialog"], .dropdown-content, .popover-content {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark .modal-content, .dark [role="dialog"], .dark .dropdown-content, .dark .popover-content {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Typography Visual Harmony */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.015em;
+  line-height: 1.25;
 }
 
 /* Scrollbars */

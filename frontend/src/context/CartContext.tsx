@@ -38,6 +38,8 @@ interface CartContextType {
   setReceiptPreview: (html: string | null) => void;
   updateCartItemPrice: (productId: string, price: number) => void;
   updateCartItemDiscount: (productId: string, discountPercentage: number) => void;
+  activeTable: string | null;
+  setActiveTable: (tableName: string | null) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -50,6 +52,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
   const [suspendedList, setSuspendedList] = useState<any[]>([]);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [activeTable, setActiveTableState] = useState<string | null>(null);
 
   // Clear cart when business sector changes to prevent cross-leakage
   useEffect(() => {
@@ -192,11 +195,63 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /* istanbul ignore next */
+  const setActiveTable = async (tableName: string | null) => {
+    if (cartItems.length > 0) {
+      if (activeTable) {
+        const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+        const existing = list.find(o => o.table_number === activeTable);
+        if (existing) {
+          await db.suspendedOrders.delete(existing.id);
+        }
+      }
+      const suspendedId = 'susp_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+      const invoiceNum = activeTable ? `TBL-${activeTable.replace(/\s+/g, '')}-${Date.now().toString().slice(-4)}` : 'SUSP-' + Date.now();
+      await db.suspendedOrders.add({
+        id: suspendedId,
+        invoice_number: invoiceNum,
+        items: JSON.parse(JSON.stringify(cartItems)),
+        customer: selectedCustomer,
+        total: totalAmount,
+        date: new Date().toISOString(),
+        branch_id: selectedBranch.id,
+        table_number: activeTable || undefined
+      });
+    }
+
+    setActiveTableState(tableName);
+
+    if (tableName) {
+      const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+      const openOrder = list.find(o => o.table_number === tableName);
+      if (openOrder) {
+        setCartItems(openOrder.items || []);
+        setSelectedCustomer(openOrder.customer);
+        await db.suspendedOrders.delete(openOrder.id);
+      } else {
+        setCartItems([]);
+        setSelectedCustomer(undefined);
+      }
+    } else {
+      setCartItems([]);
+      setSelectedCustomer(undefined);
+    }
+    await loadSuspendedList();
+  };
+
+  /* istanbul ignore next */
   const suspendOrder = async () => {
     if (cartItems.length === 0) return;
-    // SECURITY FIX: Use crypto.randomUUID instead of Math.random
+    
+    if (activeTable) {
+      const list = await db.suspendedOrders.where('branch_id').equals(selectedBranch.id).toArray();
+      const existing = list.find(o => o.table_number === activeTable);
+      if (existing) {
+        await db.suspendedOrders.delete(existing.id);
+      }
+    }
+
     const suspendedId = 'susp_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-    const invoiceNum = 'SUSP-' + Date.now();
+    const invoiceNum = activeTable ? `TBL-${activeTable.replace(/\s+/g, '')}-${Date.now().toString().slice(-4)}` : 'SUSP-' + Date.now();
     
     await db.suspendedOrders.add({
       id: suspendedId,
@@ -205,9 +260,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       customer: selectedCustomer,
       total: totalAmount,
       date: new Date().toISOString(),
-      branch_id: selectedBranch.id
+      branch_id: selectedBranch.id,
+      table_number: activeTable || undefined
     });
     
+    setActiveTableState(null);
     clearCart();
     await loadSuspendedList();
   };
@@ -219,6 +276,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setCartItems(order.items);
     setSelectedCustomer(order.customer);
+    setActiveTableState(order.table_number || null);
     await db.suspendedOrders.delete(suspendedId);
     await loadSuspendedList();
   };
@@ -249,7 +307,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       split_details: splitDetails ? JSON.stringify(splitDetails) : undefined,
       status: 'completed',
       is_synced: isOnline ? 1 : 0,
-      created_at: dateStr
+      created_at: dateStr,
+      table_number: activeTable || undefined
     };
 
     // PERFORMANCE FIX: Wrap everything in a single Dexie transaction
@@ -392,7 +451,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       </div>
     `;
 
-    // Clear cart
+    // Clear cart and active table
+    setActiveTableState(null);
     clearCart();
     
     // Refresh lists
@@ -426,7 +486,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         receiptPreview,
         setReceiptPreview,
         updateCartItemPrice,
-        updateCartItemDiscount
+        updateCartItemDiscount,
+        activeTable,
+        setActiveTable
       }}
     >
       {children}

@@ -74,6 +74,7 @@ export interface LocalOrder {
   created_at: string;
   refund_of_order_id?: string;
   refund_note?: string;
+  table_number?: string;
 }
 
 export interface LocalOrderItem {
@@ -110,6 +111,7 @@ export interface LocalSuspendedOrder {
   total: number;
   date: string;
   branch_id: string;
+  table_number?: string;
 }
 
 export interface OfflineQueueItem {

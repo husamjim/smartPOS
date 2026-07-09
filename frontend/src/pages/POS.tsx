@@ -29,7 +29,9 @@ export const POS: React.FC = () => {
     checkoutOrder,
     setReceiptPreview,
     updateCartItemPrice,
-    updateCartItemDiscount
+    updateCartItemDiscount,
+    activeTable,
+    setActiveTable
   } = useCart();
 
   // Search & Categories
@@ -60,7 +62,6 @@ export const POS: React.FC = () => {
   const [mockScaleWeight, setMockScaleWeight] = useState<number>(1.25);
 
   // Sector Specific States
-  const [activeTable, setActiveTable] = useState<string | null>(null);
   const [tables, setTables] = useState<string[]>(() => {
     const saved = localStorage.getItem('pos_restaurant_tables');
     return saved ? JSON.parse(saved) : ['Table 1', 'Table 2', 'Table 3', 'Table 4', 'Table 5', 'Table 6'];
@@ -926,7 +927,7 @@ export const POS: React.FC = () => {
               <div className="space-y-3">
                 {/* Barcode scanner input simulating typing */}
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 block font-bold">📷 {isRtl ? 'الماسح الضوئي للباركود (Simulation):' : 'Barcode Scan Simulation:'}</label>
+                  <label className="text-[10px] text-slate-400 block font-bold">📷 {isRtl ? 'الماسح الضوئي للباركود:' : 'Barcode Scanner Input:'}</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -1156,17 +1157,26 @@ export const POS: React.FC = () => {
                 <div className="grid grid-cols-6 gap-2">
                   {tables.map(t => {
                     const isSelected = activeTable === t;
+                    const hasOpenInvoice = suspendedList.some(o => o.table_number === t);
                     return (
                       <button
                         key={t}
+                        type="button"
                         onClick={() => setActiveTable(isSelected ? null : t)}
-                        className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                        className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border flex flex-col items-center justify-center gap-0.5 ${
                           isSelected
                             ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                            : 'bg-white/40 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100'
+                            : hasOpenInvoice
+                              ? 'bg-amber-500/10 dark:bg-amber-500/20 border-amber-500 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
+                              : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100'
                         }`}
                       >
-                        {t.replace('Table ', isRtl ? 'طاولة ' : 'T ')}
+                        <span>{t.replace('Table ', isRtl ? 'طاولة ' : 'T ')}</span>
+                        {hasOpenInvoice && (
+                          <span className={`text-[8px] font-medium ${isSelected ? 'text-blue-200' : 'text-amber-500'}`}>
+                            ({isRtl ? 'مشغولة' : 'Occupied'})
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -1219,17 +1229,19 @@ export const POS: React.FC = () => {
 
             {/* Scale weight indicator */}
             {devices.scale && (
-              <div className="p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50 bg-white/20 dark:bg-slate-950/20 text-xs flex justify-between items-center gap-4 animate-fade-in">
+              <div className="p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-955 text-xs flex justify-between items-center gap-4 animate-fade-in shadow-xs">
                 <span className="font-bold">⚖️ {isRtl ? 'الميزان الإلكتروني النشط:' : 'Electronic Scale Weight:'}</span>
-                <input
-                  type="range"
-                  min={0.1}
-                  max={10}
-                  step={0.05}
-                  value={mockScaleWeight}
-                  onChange={e => setMockScaleWeight(parseFloat(e.target.value))}
-                  className="flex-1"
-                />
+                {import.meta.env.DEV && (
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={10}
+                    step={0.05}
+                    value={mockScaleWeight}
+                    onChange={e => setMockScaleWeight(parseFloat(e.target.value))}
+                    className="flex-1"
+                  />
+                )}
                 <span className="font-bold text-blue-500 font-sans">{mockScaleWeight.toFixed(2)} kg</span>
               </div>
             )}

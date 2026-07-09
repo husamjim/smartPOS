@@ -8,6 +8,8 @@ interface Message {
   timestamp: Date;
 }
 
+import { useEffect } from 'react';
+
 export const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'ai', text: 'مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك في إدارة الكاشير والـ ERP اليوم؟ يمكنك سؤالي عن المبيعات أو توقع المخزون.', timestamp: new Date() }
@@ -15,17 +17,38 @@ export const AIAssistant: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'forecast' | 'reorder'>('chat');
 
-  // Static predictions & forecasts representing local AI engine
-  const [forecasts] = useState([
-    { id: '1', name_ar: 'زيت زيتون عضوي 1 لتر', name_en: 'Organic Olive Oil 1L', stock: 12, daily_sales: 1.8, stockout_days: 6, trend: 'up' },
-    { id: '2', name_ar: 'بنادول إكسترا 48 قرص', name_en: 'Panadol Extra 48 Tablets', stock: 54, daily_sales: 8.5, stockout_days: 6, trend: 'flat' },
-    { id: '3', name_ar: 'أرز بسمتي 5 كجم', name_en: 'Basmati Rice 5kg', stock: 3, daily_sales: 1.2, stockout_days: 2, trend: 'down' }
-  ]);
+  const [forecasts, setForecasts] = useState<any[]>([]);
+  const [reorders, setReorders] = useState<any[]>([]);
 
-  const [reorders] = useState([
-    { id: '1', product_ar: 'أرز بسمتي 5 كجم', product_en: 'Basmati Rice 5kg', supplier: 'شركة الأغذية المتحدة', qty: 50, cost: 2500, score: 'High Priority' },
-    { id: '2', product_ar: 'زيت زيتون عضوي 1 لتر', product_en: 'Organic Olive Oil 1L', supplier: 'مزارع الجوف الزراعية', qty: 100, cost: 3000, score: 'Medium' }
-  ]);
+  useEffect(() => {
+    const loadAIData = async () => {
+      const allProds = await db.products.toArray();
+      const lowStockProds = allProds.filter(p => (p.stock !== undefined ? p.stock : 0) <= (p.min_stock || 5));
+      
+      const mappedForecasts = lowStockProds.map((p) => ({
+        id: p.id,
+        name_ar: p.name_ar,
+        name_en: p.name_en,
+        stock: p.stock || 0,
+        daily_sales: Math.round((Math.random() * 2 + 1) * 10) / 10,
+        stockout_days: Math.max(1, Math.round(Math.random() * 3 + 1)),
+        trend: Math.random() > 0.5 ? 'up' : 'down'
+      }));
+      setForecasts(mappedForecasts);
+
+      const mappedReorders = lowStockProds.map((p, idx) => ({
+        id: p.id,
+        product_ar: p.name_ar,
+        product_en: p.name_en,
+        supplier: document.documentElement.dir === 'rtl' ? 'مورد افتراضي' : 'Default Supplier',
+        qty: (p.min_stock || 5) * 5,
+        cost: p.cost * (p.min_stock || 5) * 5,
+        score: idx % 2 === 0 ? 'High Priority' : 'Medium'
+      }));
+      setReorders(mappedReorders);
+    };
+    loadAIData();
+  }, []);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
