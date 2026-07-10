@@ -125,7 +125,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { i18n } = useTranslation();
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'dark');
   const [language, setLanguage] = useState<string>(i18n.language || 'ar');
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  // Online state: In Electron (desktop), we are always offline unless a backend URL is configured and reachable.
+  // navigator.onLine only checks if the OS has network — it does NOT mean our backend is running.
+  const isElectronRuntime = !!(window as any).electronAPI?.isElectron;
+  const hasBackendUrl = !!import.meta.env.VITE_BACKEND_URL;
+  const [isOnline, setIsOnline] = useState<boolean>(
+    // In Electron: start as offline unless explicitly a web session with backend
+    isElectronRuntime ? false : (navigator.onLine && hasBackendUrl)
+  );
   
   // Custom branches loader
   const [branches] = useState<Branch[]>(() => {
@@ -236,10 +243,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [theme]);
 
   useEffect(() => {
-    const up = () => { setIsOnline(true); triggerLocalSync(); };
+    // In Electron: only mark online if we can successfully reach the backend
+    const checkBackend = async () => {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
+      if (!backendUrl) {
+        setIsOnline(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${backendUrl}/api/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(3000),
+        });
+        setIsOnline(res.ok);
+      } catch {
+        setIsOnline(false);
+      }
+    };
+
+    const up = () => { checkBackend().then(() => triggerLocalSync()); };
     const down = () => setIsOnline(false);
     window.addEventListener('online', up);
     window.addEventListener('offline', down);
+
+    // Initial check for web sessions
+    if (!isElectronRuntime) {
+      checkBackend();
+    }
+
     return () => {
       window.removeEventListener('online', up);
       window.removeEventListener('offline', down);

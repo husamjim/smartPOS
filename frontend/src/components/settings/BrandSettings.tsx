@@ -80,7 +80,7 @@ export const BrandSettings: React.FC = () => {
 
     // Sync other values that are context-linked
     localStorage.setItem('pos_store_currency', config.currency);
-    localStorage.setItem('pos_store_name', config.systemName);
+    localStorage.setItem('pos_store_name', 'smart POS');
     localStorage.setItem('theme_font', config.defaultFont);
 
     AuditLogger.log('CHANGE_SETTINGS', 'brand', 'Updated branding settings and custom styles', 'success');
@@ -103,9 +103,9 @@ export const BrandSettings: React.FC = () => {
             <label className="text-slate-400 block mb-1.5">{isRtl ? 'اسم النظام' : 'System Name'}</label>
             <input 
               type="text" 
-              value={config.systemName}
-              onChange={e => setConfig(prev => ({ ...prev, systemName: e.target.value }))}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none" 
+              value="smart POS"
+              disabled
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-500 cursor-not-allowed focus:outline-none" 
             />
           </div>
           <div>

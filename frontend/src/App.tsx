@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from './context/AppContext';
 import { useCart } from './context/CartContext';
 import { telemetry } from './utils/telemetry';
+import { SetupWizard } from './pages/SetupWizard';
 // React.lazy dynamic code-splitting imports for all heavy ERP & POS pages
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const POS = React.lazy(() => import('./pages/POS').then(m => ({ default: m.POS })));
@@ -37,8 +38,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
-  Upload
+  Upload,
+  AlertCircle
 } from 'lucide-react';
+
+// Detect if running inside Electron (not a web browser)
+const isElectron: boolean = !!(window as any).electronAPI?.isElectron;
 
 export default function App() {
   const { t } = useTranslation();
@@ -67,19 +72,15 @@ export default function App() {
   const [showHardwareSim, setShowHardwareSim] = useState(false);
   const [scanInput, setScanInput] = useState('');
 
-  // Landing view state
-  const [landingView, setLandingView] = useState<'landing' | 'login' | 'signup' | 'otp'>('landing');
-  const [showWelcome, setShowWelcome] = useState(!localStorage.getItem('smartpos_first_run_done'));
+  // Detect first-run: show SetupWizard if no first-run marker AND no users created yet
+  const isFirstRun = !localStorage.getItem('smartpos_setup_complete');
+  const [showNewSetupWizard, setShowNewSetupWizard] = useState<boolean>(isFirstRun);
 
-  // Setup Wizard state — shown when no users exist in localStorage
-  const [showSetupWizard, setShowSetupWizard] = useState(false);
-  const [wizardStep, setWizardStep] = useState<1 | 2>(1);
-  const [wizardName, setWizardName] = useState('');
-  const [wizardUsername, setWizardUsername] = useState('');
-  const [wizardPassword, setWizardPassword] = useState('');
-  const [wizardConfirm, setWizardConfirm] = useState('');
-  const [wizardError, setWizardError] = useState('');
-  const [wizardDone, setWizardDone] = useState(false);
+  // Landing view state — In Electron, skip to login directly; web starts at landing
+  const [landingView, setLandingView] = useState<'landing' | 'login' | 'signup' | 'otp'>(
+    isElectron || localStorage.getItem('smartpos_setup_complete') ? 'login' : 'landing'
+  );
+
 
   // Login form local states
   const [loginUsername, setLoginUsername] = useState('');
@@ -238,7 +239,7 @@ export default function App() {
 
         <div className="text-center space-y-6 max-w-sm w-full px-6">
           <div className="relative animate-pulse">
-            <img src="/logo.png" alt="smartPOS" className="h-28 mx-auto object-contain filter drop-shadow-[0_0_20px_rgba(59,130,246,0.35)]" />
+            <img src="./logo.png" alt="smartPOS" className="h-28 mx-auto object-contain filter drop-shadow-[0_0_20px_rgba(59,130,246,0.35)]" />
           </div>
 
           <div className="space-y-2">
@@ -264,65 +265,39 @@ export default function App() {
     );
   }
 
-  if (showWelcome) {
+  // Show new SetupWizard on very first run
+  if (showNewSetupWizard) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-6 ${theme === 'dark' ? 'dark bg-[#090d16] text-white' : 'bg-slate-50 text-slate-900'}`} dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="glass-card p-8 rounded-3xl max-w-lg w-full space-y-6 border border-slate-200/50 dark:border-slate-800/50 text-center shadow-2xl relative overflow-hidden">
-          {/* Decorative glow */}
-          <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="space-y-3">
-            <img src="/logo.png" alt="smart POS" className="h-24 mx-auto object-contain mb-2 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
-            <h1 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 bg-clip-text text-transparent font-sans">
-              {isRtl ? 'نظام سمارت POS & ERP' : 'smart POS & ERP System'}
-            </h1>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-              {isRtl ? 'الإصدار المعتمد للإنتاج • v1.0.1' : 'Commercial Release Candidate • v1.0.1'}
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-950/50 border border-slate-200/40 dark:border-slate-800/40 text-xs text-right space-y-2.5 font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
-            <div className="flex justify-between items-center border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
-              <span className="text-slate-400">{isRtl ? 'نوع الترخيص:' : 'License Type:'}</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">{isRtl ? 'ترخيص تجاري مدى الحياة (المؤسسات)' : 'Lifetime Enterprise License'}</span>
-            </div>
-            <div className="flex justify-between items-center border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
-              <span className="text-slate-400">{isRtl ? 'مفتاح التفعيل:' : 'Activation Key:'}</span>
-              <span className="font-bold font-mono text-blue-500">SP-7839-8291-RC101</span>
-            </div>
-            <div className="flex justify-between items-center border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
-              <span className="text-slate-400">{isRtl ? 'حالة قاعدة البيانات:' : 'Database Integrity:'}</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">{isRtl ? 'مؤمنة ومحسنة (IndexedDB / WAL)' : 'Optimized & Secure (IndexedDB / WAL)'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">{isRtl ? 'بيئة التشغيل:' : 'Runtime Environment:'}</span>
-              <span className="font-bold text-slate-600 dark:text-slate-300">{isRtl ? 'برنامج تشغيل مستقل (Offline Enabled)' : 'Stand-alone Desktop / Mobile Client'}</span>
-            </div>
-          </div>
-
-          <div className="text-xs text-slate-500 leading-relaxed max-w-md mx-auto animate-fade-in" dir={isRtl ? 'rtl' : 'ltr'}>
-            {isRtl 
-              ? 'مرحباً بك! تم تهيئة وضبط قاعدة البيانات المحلية المشفرة وتجهيز الواجهات الذكية بنجاح. هذا المنتج مرخص بالكامل ومعد للاستخدام التجاري في نقاط البيع وإدارة المستودعات.'
-              : 'Welcome! The encrypted local database structures and responsive cashier modules have been successfully initialized. This software is fully licensed and prepared for commercial operations.'}
-          </div>
-
-          <button
-            onClick={() => {
-              localStorage.setItem('smartpos_first_run_done', 'true');
-              setShowWelcome(false);
-            }}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-lg shadow-blue-900/35 transition-all flex items-center justify-center gap-2"
-          >
-            <span>{isRtl ? 'بدء الاستخدام وتفعيل واجهة البيع' : 'Initialize & Launch Cashier'}</span>
-          </button>
-        </div>
-      </div>
+      <SetupWizard
+        onComplete={(wizardData) => {
+          if (wizardData.storeName) localStorage.setItem('pos_store_name', wizardData.storeName);
+          if (wizardData.currency) localStorage.setItem('pos_store_currency', wizardData.currency);
+          if (wizardData.phone) localStorage.setItem('pos_store_phone', wizardData.phone);
+          if (wizardData.address) localStorage.setItem('pos_store_address', wizardData.address);
+          if (wizardData.logoBase64) localStorage.setItem('pos_store_logo', wizardData.logoBase64);
+          if (wizardData.taxRate !== undefined) localStorage.setItem('pos_store_tax', wizardData.taxRate.toString());
+          if (wizardData.invoicePrefix) localStorage.setItem('pos_invoice_prefix', wizardData.invoicePrefix);
+          if (wizardData.paperSize) localStorage.setItem('pos_invoice_paper', wizardData.paperSize);
+          if (wizardData.companyName) localStorage.setItem('pos_company_name', wizardData.companyName);
+          addUser({
+            username: wizardData.ownerEmail,
+            displayName: wizardData.ownerName,
+            role: 'owner',
+            password: wizardData.ownerPassword,
+            active: true,
+          });
+          localStorage.setItem('smartpos_setup_complete', 'true');
+          localStorage.setItem('smartpos_first_run_done', 'true');
+          setShowNewSetupWizard(false);
+          setLandingView('login');
+        }}
+      />
     );
   }
 
   if (currentUser === null) {
-    if (landingView === 'landing') {
+    // In Electron: skip Landing Page entirely — go straight to login
+    if (landingView === 'landing' && !isElectron) {
       return (
         <LandingPage 
           language={language} 
@@ -368,7 +343,7 @@ export default function App() {
           {landingView === 'login' && (
             <>
               <div className="text-center space-y-2">
-                <img src="/logo.png" alt="smart POS" className="h-28 mx-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+                <img src="./logo.png" alt="smart POS" className="h-28 mx-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
                 <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
                   {isRtl ? 'تسجيل الدخول للنظام' : 'System Login'}
                 </h2>
@@ -378,8 +353,9 @@ export default function App() {
               </div>
 
               {loginError && (
-                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
-                  ⚠️ {loginError}
+                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold flex items-center justify-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  {loginError}
                 </div>
               )}
 
@@ -439,7 +415,7 @@ export default function App() {
               {!localStorage.getItem('pos_users') && (
                 <div className="border-t pt-3 text-center">
                   <button
-                    onClick={() => setShowSetupWizard(true)}
+                    onClick={() => setShowNewSetupWizard(true)}
                     className="text-xs text-emerald-500 hover:underline font-bold flex items-center gap-1.5 mx-auto"
                   >
                     ✨ {isRtl ? 'إعداد أول حساب للمالك' : 'First-Time Setup Wizard'}
@@ -452,7 +428,7 @@ export default function App() {
           {landingView === 'signup' && (
             <>
               <div className="text-center space-y-2">
-                <img src="/logo.png" alt="smart POS" className="h-20 mx-auto object-contain mb-2 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+                <img src="./logo.png" alt="smart POS" className="h-20 mx-auto object-contain mb-2 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
                 <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
                   {isRtl ? 'تسجيل حساب تجاري جديد' : 'Register Business Account'}
                 </h2>
@@ -643,7 +619,7 @@ export default function App() {
           <div className="px-4 flex items-center justify-between">
             {!sidebarCollapsed && (
               <span className="font-extrabold text-base tracking-wide bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 bg-clip-text text-transparent flex items-center gap-2 font-sans">
-                <img src="/logo.png" alt="smart POS" className="h-10 w-10 object-contain" />
+                <img src="./logo.png" alt="smart POS" className="h-10 w-10 object-contain" />
                 <span>{isRtl ? 'سمارت POS' : 'smart POS'}</span>
               </span>
             )}
@@ -918,143 +894,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Setup Wizard Modal (First-Time Owner Setup) ─────────────────────── */}
-      {showSetupWizard && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6" dir={isRtl ? 'rtl' : 'ltr'}>
-          <div className="glass-card p-8 rounded-3xl max-w-md w-full space-y-6 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl relative overflow-hidden animate-fade-in">
-            {/* Glow decorations */}
-            <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            {/* Header */}
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-white text-2xl shadow-lg">
-                ⚙️
-              </div>
-              <h2 className="text-xl font-extrabold bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent font-sans">
-                {isRtl ? 'إعداد النظام الأول' : 'First-Time Setup'}
-              </h2>
-              <p className="text-xs text-slate-400">
-                {isRtl ? 'أنشئ حساب المالك الرئيسي لبدء استخدام النظام' : 'Create the owner account to start using the system'}
-              </p>
-            </div>
-
-            {/* Progress steps */}
-            <div className="flex items-center gap-2 justify-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizardStep >= 1 ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 text-slate-400'}`}>1</div>
-              <div className={`flex-1 h-0.5 ${wizardStep >= 2 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`} />
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizardStep >= 2 ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 dark:border-slate-700 text-slate-400'}`}>2</div>
-            </div>
-
-            {wizardError && (
-              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
-                ⚠️ {wizardError}
-              </div>
-            )}
-
-            {wizardDone ? (
-              <div className="text-center space-y-3 py-4">
-                <div className="text-5xl animate-bounce">✅</div>
-                <p className="text-sm font-bold text-emerald-500">{isRtl ? 'تم إنشاء الحساب بنجاح!' : 'Account created successfully!'}</p>
-                <p className="text-xs text-slate-400">{isRtl ? 'جاري تسجيل الدخول...' : 'Logging you in...'}</p>
-              </div>
-            ) : wizardStep === 1 ? (
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                if (!wizardName.trim() || !wizardUsername.trim()) {
-                  setWizardError(isRtl ? 'الرجاء ملء جميع الحقول' : 'Please fill all fields');
-                  return;
-                }
-                setWizardError('');
-                setWizardStep(2);
-              }} className="space-y-4">
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'الاسم الكامل' : 'Full Name'}</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={isRtl ? 'مثال: أحمد محمد' : 'e.g. John Smith'}
-                    value={wizardName}
-                    onChange={e => setWizardName(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
-                  />
-                </div>
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'اسم المستخدم (للدخول)' : 'Username (for login)'}</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={isRtl ? 'مثال: admin أو owner' : 'e.g. admin or owner'}
-                    value={wizardUsername}
-                    onChange={e => setWizardUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm font-mono"
-                  />
-                </div>
-                <button type="submit" className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:opacity-90 text-white font-bold text-sm shadow-md transition-all">
-                  {isRtl ? 'التالي ←' : 'Next →'}
-                </button>
-                <button type="button" onClick={() => setShowSetupWizard(false)} className="w-full py-2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                  {isRtl ? 'إلغاء' : 'Cancel'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                if (wizardPassword.length < 6) {
-                  setWizardError(isRtl ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters');
-                  return;
-                }
-                if (wizardPassword !== wizardConfirm) {
-                  setWizardError(isRtl ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match');
-                  return;
-                }
-                setWizardError('');
-                addUser({ username: wizardUsername, displayName: wizardName, role: 'owner', password: wizardPassword, active: true });
-                setWizardDone(true);
-                setTimeout(() => {
-                  setShowSetupWizard(false);
-                  setWizardDone(false);
-                  setWizardStep(1);
-                  setLoginUsername(wizardUsername);
-                  setLoginPassword(wizardPassword);
-                  setLandingView('login');
-                }, 1800);
-              }} className="space-y-4">
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'كلمة المرور' : 'Password'}</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={wizardPassword}
-                    onChange={e => setWizardPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
-                  />
-                </div>
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-xs text-slate-400 block mb-1 font-bold">{isRtl ? 'تأكيد كلمة المرور' : 'Confirm Password'}</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={wizardConfirm}
-                    onChange={e => setWizardConfirm(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setWizardStep(1)} className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
-                    {isRtl ? '→ رجوع' : '← Back'}
-                  </button>
-                  <button type="submit" className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:opacity-90 text-white font-bold text-sm shadow-md transition-all">
-                    {isRtl ? '✓ إنشاء الحساب والدخول' : '✓ Create Account & Login'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
 
     </div>
   );

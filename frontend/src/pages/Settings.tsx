@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings as SettingsIcon, Languages, Sun, Moon, ToggleLeft, ToggleRight, Database, Printer, HardDrive, Users, UserPlus, Trash2, Edit3, Eye, EyeOff, Image, Shield } from 'lucide-react';
+import { Settings as SettingsIcon, Languages, Sun, Moon, ToggleLeft, ToggleRight, Database, Printer, HardDrive, Users, UserPlus, Trash2, Edit3, Eye, EyeOff, Image, Shield, Receipt, Brain, Landmark, History, Bell, RotateCw, HelpCircle, Info, Palette, Store } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { db, seedLocalDbIfEmpty } from '../db/localDb';
 import { HardwareService } from '../services/hardware';
@@ -515,31 +515,35 @@ export const Settings: React.FC = () => {
       {/* Settings Navigation Tabs */}
       <div className="flex gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto text-[11px] font-bold">
         {[
-          { id: 'general', label: isRtl ? '⚙️ عام وملحقات' : 'General & Peripherals' },
-          { id: 'brand', label: isRtl ? '🎨 الهوية والألوان' : 'Branding & Theme' },
-          { id: 'invoice', label: isRtl ? '🧾 الفاتورة والمتجر' : 'Invoice Settings' },
-          ...(currentUser?.role === 'owner' ? [{ id: 'users', label: isRtl ? '👥 المستخدمين' : 'User Accounts' }] : []),
-          { id: 'ai', label: isRtl ? '🤖 الذكاء الاصطناعي' : 'AI Assistant' },
-          { id: 'backup', label: isRtl ? '💾 النسخ الاحتياطي' : 'Backup Center' },
-          ...(currentUser?.role === 'owner' ? [{ id: 'accounts', label: isRtl ? '📊 شجرة الحسابات' : 'Chart of Accounts' }] : []),
-          ...(currentUser?.role === 'owner' ? [{ id: 'audit', label: isRtl ? '📋 سجل النشاطات' : 'Activity Trail Log' }] : []),
-          { id: 'notifications', label: isRtl ? '🔔 الإشعارات' : 'Notifications' },
-          { id: 'updates', label: isRtl ? '🔄 التحديثات' : 'System Updates' },
-          { id: 'support', label: isRtl ? '📞 الدعم الفني' : 'Technical Support' },
-          { id: 'about', label: isRtl ? 'ℹ️ حول النظام' : 'About System' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setSettingsTab(tab.id as any)}
-            className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap ${
-              settingsTab === tab.id
-                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+          { id: 'general', label: isRtl ? 'عام وملحقات' : 'General & Peripherals', icon: SettingsIcon },
+          { id: 'brand', label: isRtl ? 'الهوية والألوان' : 'Branding & Theme', icon: Palette },
+          { id: 'invoice', label: isRtl ? 'الفاتورة والمتجر' : 'Invoice Settings', icon: Receipt },
+          ...(currentUser?.role === 'owner' ? [{ id: 'users', label: isRtl ? 'المستخدمين' : 'User Accounts', icon: Users }] : []),
+          { id: 'ai', label: isRtl ? 'الذكاء الاصطناعي' : 'AI Assistant', icon: Brain },
+          { id: 'backup', label: isRtl ? 'النسخ الاحتياطي' : 'Backup Center', icon: Database },
+          ...(currentUser?.role === 'owner' ? [{ id: 'accounts', label: isRtl ? 'شجرة الحسابات' : 'Chart of Accounts', icon: Landmark }] : []),
+          ...(currentUser?.role === 'owner' ? [{ id: 'audit', label: isRtl ? 'سجل النشاطات' : 'Activity Trail Log', icon: History }] : []),
+          { id: 'notifications', label: isRtl ? 'الإشعارات' : 'Notifications', icon: Bell },
+          { id: 'updates', label: isRtl ? 'التحديثات' : 'System Updates', icon: RotateCw },
+          { id: 'support', label: isRtl ? 'الدعم الفني' : 'Technical Support', icon: HelpCircle },
+          { id: 'about', label: isRtl ? 'حول النظام' : 'About System', icon: Info },
+        ].map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSettingsTab(tab.id as any)}
+              className={`px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                settingsTab === tab.id
+                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm font-bold'
+                  : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 font-semibold'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Conditionally Rendered Panels */}
@@ -1259,119 +1263,234 @@ export const Settings: React.FC = () => {
           INVOICE / STORE SETTINGS
       ══════════════════════════════════════════════════════════════ */}
       {settingsTab === 'invoice' && (
-        <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
-        <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
-          <h3 className="font-bold text-sm flex items-center gap-1.5">
-            <span className="text-lg">🧾</span>
-            {isRtl ? 'إعدادات الفاتورة والمتجر' : 'Invoice & Store Settings'}
-          </h3>
-          {invSavedMsg && <span className="text-xs font-bold text-emerald-500 animate-fade-in">{invSavedMsg}</span>}
-        </div>
-
-        {/* Logo + Store Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2 flex items-center gap-4">
-            <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-900 shrink-0">
-              {storeLogo ? <img src={storeLogo} className="w-full h-full object-contain" alt="logo" /> : <span className="text-3xl">🏪</span>}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start animate-fade-in text-right font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+          {/* Settings panel */}
+          <div className="lg:col-span-3 glass-card p-5 rounded-2xl shadow-sm space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">
+                <Receipt className="h-4.5 w-4.5 text-indigo-500" />
+                {isRtl ? 'إعدادات الفاتورة والمتجر' : 'Invoice & Store Settings'}
+              </h3>
+              {invSavedMsg && <span className="text-xs font-bold text-emerald-500 animate-fade-in">{invSavedMsg}</span>}
             </div>
-            <div className="space-y-2 flex-1">
-              <p className="text-xs text-slate-400 font-bold">{isRtl ? 'شعار المتجر (Logo)' : 'Store Logo'}</p>
-              <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
-              <button onClick={() => logoInputRef.current?.click()}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-2">
-                📷 {isRtl ? 'تغيير الشعار' : 'Upload Logo'}
-              </button>
-              {storeLogo && <button onClick={() => setStoreLogo('')} className="text-[10px] text-red-400 hover:underline">{isRtl ? 'حذف الشعار' : 'Remove Logo'}</button>}
-            </div>
-          </div>
 
-          {[{label: isRtl ? 'اسم المتجر' : 'Store Name', val: storeName, set: setStoreName, ph: isRtl ? 'مثال: متجر أبو علي' : 'e.g. My Store'},
-            {label: isRtl ? 'الرقم الضريبي (VAT)' : 'VAT Number', val: vatNumber, set: setVatNumber, ph: '312345678900003'},
-            {label: isRtl ? 'السجل التجاري' : 'Commercial Reg. No.', val: invCrNumber, set: setInvCrNumber, ph: '1010234567'},
-            {label: isRtl ? 'الهاتف الرئيسي' : 'Phone 1', val: storePhone, set: setStorePhone, ph: '+966501234567'},
-            {label: isRtl ? 'الهاتف الثاني' : 'Phone 2', val: invPhone2, set: setInvPhone2, ph: '+966502345678'},
-            {label: isRtl ? 'البريد الإلكتروني' : 'Email', val: invEmail, set: setInvEmail, ph: 'store@example.com'},
-            {label: isRtl ? 'الموقع الإلكتروني' : 'Website', val: invWebsite, set: setInvWebsite, ph: 'https://store.com'},
-            {label: isRtl ? 'العنوان' : 'Address', val: storeAddress, set: setStoreAddress, ph: isRtl ? 'الرياض، طريق الملك فهد' : 'Riyadh, King Fahd Road'},
-          ].map(({label, val, set, ph}) => (
-            <div key={label}>
-              <label className="text-xs text-slate-400 font-bold block mb-1.5">{label}</label>
-              <input type="text" placeholder={ph} value={val}
-                onChange={e => set(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
-            </div>
-          ))}
-        </div>
+            {/* Logo + Store Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2 flex items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-900 shrink-0">
+                  {storeLogo ? <img src={storeLogo} className="w-full h-full object-contain" alt="logo" /> : <Store className="h-8 w-8 text-slate-400" />}
+                </div>
+                <div className="space-y-2 flex-1">
+                  <p className="text-xs text-slate-400 font-bold">{isRtl ? 'شعار المتجر' : 'Store Logo'}</p>
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                  <button onClick={() => logoInputRef.current?.click()}
+                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-2">
+                    <Image className="h-3.5 w-3.5" />
+                    {isRtl ? 'تغيير الشعار' : 'Upload Logo'}
+                  </button>
+                  {storeLogo && <button onClick={() => setStoreLogo('')} className="text-[10px] text-red-400 hover:underline">{isRtl ? 'حذف الشعار' : 'Remove Logo'}</button>}
+                </div>
+              </div>
 
-        {/* Receipt texts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'رسالة أسفل الفاتورة' : 'Receipt Footer'}</label>
-            <textarea rows={2} value={receiptFooter} onChange={e => setReceiptFooter(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
-          </div>
-          <div>
-            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'سياسة الإرجاع' : 'Return Policy'}</label>
-            <textarea rows={2} value={invReturnPolicy} onChange={e => setInvReturnPolicy(e.target.value)}
-              placeholder={isRtl ? 'مثال: لا يُقبل الإرجاع بعد 7 أيام' : 'e.g. No returns after 7 days'}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
-          </div>
-        </div>
-
-        {/* Paper size + Color */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'حجم الورق' : 'Paper Size'}</label>
-            <div className="flex gap-2">
-              {['A4', '80mm', '58mm'].map(s => (
-                <button key={s} onClick={() => setInvPaperSize(s)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
-                    invPaperSize === s ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}>{s}</button>
+              {[{label: isRtl ? 'اسم المتجر' : 'Store Name', val: storeName, set: setStoreName, ph: isRtl ? 'مثال: متجر أبو علي' : 'e.g. My Store'},
+                {label: isRtl ? 'الرقم الضريبي (VAT)' : 'VAT Number', val: vatNumber, set: setVatNumber, ph: '312345678900003'},
+                {label: isRtl ? 'السجل التجاري' : 'Commercial Reg. No.', val: invCrNumber, set: setInvCrNumber, ph: '1010234567'},
+                {label: isRtl ? 'الهاتف الرئيسي' : 'Phone 1', val: storePhone, set: setStorePhone, ph: '+966501234567'},
+                {label: isRtl ? 'الهاتف الثاني' : 'Phone 2', val: invPhone2, set: setInvPhone2, ph: '+966502345678'},
+                {label: isRtl ? 'البريد الإلكتروني' : 'Email', val: invEmail, set: setInvEmail, ph: 'store@example.com'},
+                {label: isRtl ? 'الموقع الإلكتروني' : 'Website', val: invWebsite, set: setInvWebsite, ph: 'https://store.com'},
+                {label: isRtl ? 'العنوان' : 'Address', val: storeAddress, set: setStoreAddress, ph: isRtl ? 'الرياض، طريق الملك فهد' : 'Riyadh, King Fahd Road'},
+              ].map(({label, val, set, ph}) => (
+                <div key={label}>
+                  <label className="text-xs text-slate-400 font-bold block mb-1.5">{label}</label>
+                  <input type="text" placeholder={ph} value={val}
+                    onChange={e => set(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-slate-800 dark:text-slate-200" />
+                </div>
               ))}
             </div>
+
+            {/* Receipt texts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'رسالة أسفل الفاتورة' : 'Receipt Footer'}</label>
+                <textarea rows={2} value={receiptFooter} onChange={e => setReceiptFooter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-slate-800 dark:text-slate-200" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'سياسة الإرجاع' : 'Return Policy'}</label>
+                <textarea rows={2} value={invReturnPolicy} onChange={e => setInvReturnPolicy(e.target.value)}
+                  placeholder={isRtl ? 'مثال: لا يُقبل الإرجاع بعد 7 أيام' : 'e.g. No returns after 7 days'}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-slate-800 dark:text-slate-200" />
+              </div>
+            </div>
+
+            {/* Paper size + Color */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'حجم الورق' : 'Paper Size'}</label>
+                <div className="flex gap-2">
+                  {['A4', '80mm', '58mm'].map(s => (
+                    <button key={s} onClick={() => setInvPaperSize(s)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                        invPaperSize === s ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
+                      }`}>{s}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'لون الفاتورة' : 'Invoice Color'}</label>
+                <div className="flex items-center gap-3">
+                  <input type="color" value={invColor} onChange={e => setInvColor(e.target.value)}
+                    className="w-12 h-10 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer bg-transparent" />
+                  <span className="text-sm font-mono text-slate-500">{invColor}</span>
+                  {['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#0f172a'].map(c => (
+                    <button key={c} onClick={() => setInvColor(c)}
+                      style={{background: c}} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"/>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Show/Hide toggles */}
+            <div>
+              <p className="text-xs text-slate-400 font-bold mb-3">{isRtl ? 'عناصر الفاتورة (إظهار / إخفاء)' : 'Invoice Elements (Show / Hide)'}</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {[
+                  {label: isRtl ? 'الشعار' : 'Logo', val: invShowLogo, set: setInvShowLogo},
+                  {label: isRtl ? 'العنوان' : 'Address', val: invShowAddress, set: setInvShowAddress},
+                  {label: isRtl ? 'الهاتف' : 'Phone', val: invShowPhone, set: setInvShowPhone},
+                  {label: isRtl ? 'الضريبة' : 'Tax Line', val: invShowTax, set: setInvShowTax},
+                  {label: isRtl ? 'رمز QR' : 'QR Code', val: invShowQr, set: setInvShowQr},
+                  {label: isRtl ? 'السجل التجاري' : 'CR Number', val: invShowCr, set: setInvShowCr},
+                ].map(({label, val, set}) => (
+                  <button key={label} onClick={() => set(!val)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
+                      val ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-700 text-slate-400'
+                    }`}>
+                    <span className="w-3.5 h-3.5 rounded border border-slate-400 flex items-center justify-center text-[8px] font-black">
+                      {val ? '✓' : ''}
+                    </span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={handleSaveInvoice}
+              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+              <Printer className="h-4 w-4" />
+              {isRtl ? 'حفظ إعدادات الفاتورة' : 'Save Invoice Settings'}
+            </button>
           </div>
-          <div>
-            <label className="text-xs text-slate-400 font-bold block mb-1.5">{isRtl ? 'لون الفاتورة' : 'Invoice Color'}</label>
-            <div className="flex items-center gap-3">
-              <input type="color" value={invColor} onChange={e => setInvColor(e.target.value)}
-                className="w-12 h-10 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer" />
-              <span className="text-sm font-mono text-slate-500">{invColor}</span>
-              {['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#0f172a'].map(c => (
-                <button key={c} onClick={() => setInvColor(c)}
-                  style={{background: c}} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"/>
-              ))}
+
+          {/* Live Preview Panel */}
+          <div className="lg:col-span-2 flex flex-col items-center space-y-4">
+            <div className="w-full glass-card p-3 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 text-center">
+              <span className="text-xs font-bold text-slate-400">{isRtl ? 'معاينة حية ومباشرة للفاتورة' : 'Invoice Live Preview'}</span>
+            </div>
+            
+            {/* Mock Print Paper */}
+            <div 
+              style={{
+                width: '100%',
+                maxWidth: invPaperSize === 'A4' ? '340px' : invPaperSize === '80mm' ? '280px' : '220px',
+                fontSize: invPaperSize === 'A4' ? '12px' : invPaperSize === '80mm' ? '10px' : '9px',
+                borderColor: invColor,
+              }}
+              className="bg-white text-slate-900 p-4 rounded-xl border-t-8 shadow-xl transition-all duration-300 space-y-3 font-mono"
+            >
+              {/* Header */}
+              <div className="text-center space-y-1">
+                {invShowLogo && storeLogo && (
+                  <img src={storeLogo} className="h-10 mx-auto object-contain mb-1" alt="logo preview" />
+                )}
+                <h4 className="font-extrabold text-slate-900" style={{ fontSize: invPaperSize === 'A4' ? '14px' : '11px' }}>
+                  {storeName || (isRtl ? 'اسم المتجر' : 'Store Name')}
+                </h4>
+                {invShowCr && invCrNumber && (
+                  <p className="text-slate-500">{isRtl ? `س.ت: ${invCrNumber}` : `CR: ${invCrNumber}`}</p>
+                )}
+                {invShowPhone && (storePhone || invPhone2) && (
+                  <p className="text-slate-500">
+                    {isRtl ? 'هاتف: ' : 'Tel: '}
+                    {[storePhone, invPhone2].filter(Boolean).join(' / ')}
+                  </p>
+                )}
+                {invShowAddress && storeAddress && (
+                  <p className="text-slate-500">{storeAddress}</p>
+                )}
+              </div>
+
+              {/* Invoice Meta */}
+              <div className="border-t border-b border-dashed border-slate-300 py-2 space-y-1 text-slate-600">
+                <div className="flex justify-between">
+                  <span>{isRtl ? 'رقم الفاتورة:' : 'Inv No:'}</span>
+                  <span className="font-bold">INV-2026-0001</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{isRtl ? 'التاريخ والوقت:' : 'Date & Time:'}</span>
+                  <span>{new Date().toLocaleString(language === 'ar' ? 'ar-SA' : 'en-US')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{isRtl ? 'طريقة الدفع:' : 'Payment:'}</span>
+                  <span>{isRtl ? 'نقدي' : 'Cash'}</span>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="space-y-1">
+                <div className="flex justify-between font-bold border-b border-slate-200 pb-1 text-slate-800">
+                  <span>{isRtl ? 'البيان' : 'Item'}</span>
+                  <span>{isRtl ? 'القيمة' : 'Amt'}</span>
+                </div>
+                <div className="flex justify-between text-slate-700">
+                  <span>{isRtl ? '1x منتج تجريبي أول' : '1x Sample Product A'}</span>
+                  <span>50.00</span>
+                </div>
+                <div className="flex justify-between text-slate-700">
+                  <span>{isRtl ? '2x منتج تجريبي ثانٍ' : '2x Sample Product B'}</span>
+                  <span>25.00</span>
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div className="border-t border-dashed border-slate-300 pt-2 space-y-1">
+                <div className="flex justify-between text-slate-600">
+                  <span>{isRtl ? 'المجموع الفرعي:' : 'Subtotal:'}</span>
+                  <span>75.00</span>
+                </div>
+                {invShowTax && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>{isRtl ? `الضريبة (${taxPercentage}%):` : `VAT (${taxPercentage}%):`}</span>
+                    <span>{(75 * taxPercentage / 100).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-extrabold text-slate-900 border-t border-slate-200 pt-1" style={{ fontSize: invPaperSize === 'A4' ? '13px' : '11px' }}>
+                  <span>{isRtl ? 'الإجمالي:' : 'Total:'}</span>
+                  <span>{(75 + (invShowTax ? (75 * taxPercentage / 100) : 0)).toFixed(2)} {currency}</span>
+                </div>
+              </div>
+
+              {/* QR and Return Policy / Footer */}
+              {(invShowQr || invReturnPolicy || receiptFooter) && (
+                <div className="border-t border-dashed border-slate-300 pt-3 text-center space-y-2">
+                  {invShowQr && (
+                    <div className="w-20 h-20 bg-slate-100 border border-slate-200 rounded mx-auto flex items-center justify-center text-slate-400 text-[10px]">
+                      [ QR Code ]
+                    </div>
+                  )}
+                  {invReturnPolicy && (
+                    <p className="text-slate-500 italic whitespace-pre-wrap">{invReturnPolicy}</p>
+                  )}
+                  {receiptFooter && (
+                    <p className="text-slate-500 font-bold whitespace-pre-wrap">{receiptFooter}</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Show/Hide toggles */}
-        <div>
-          <p className="text-xs text-slate-400 font-bold mb-3">{isRtl ? 'عناصر الفاتورة (إظهار / إخفاء)' : 'Invoice Elements (Show / Hide)'}</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {[
-              {label: isRtl ? 'الشعار' : 'Logo', val: invShowLogo, set: setInvShowLogo},
-              {label: isRtl ? 'العنوان' : 'Address', val: invShowAddress, set: setInvShowAddress},
-              {label: isRtl ? 'الهاتف' : 'Phone', val: invShowPhone, set: setInvShowPhone},
-              {label: isRtl ? 'الضريبة' : 'Tax Line', val: invShowTax, set: setInvShowTax},
-              {label: isRtl ? 'رمز QR' : 'QR Code', val: invShowQr, set: setInvShowQr},
-              {label: isRtl ? 'السجل التجاري' : 'CR Number', val: invShowCr, set: setInvShowCr},
-            ].map(({label, val, set}) => (
-              <button key={label} onClick={() => set(!val)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
-                  val ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-700 text-slate-400'
-                }`}>
-                <span>{val ? '✓' : '○'}</span> {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button onClick={handleSaveInvoice}
-          className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-sm">
-          {isRtl ? '💾 حفظ إعدادات الفاتورة' : '💾 Save Invoice Settings'}
-        </button>
-      </div>
       )}
 
       {/* ══════════════════════════════════════════════════════════════
@@ -1381,16 +1500,16 @@ export const Settings: React.FC = () => {
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-5">
           <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 className="font-bold text-sm flex items-center gap-1.5">
-              <span className="text-lg">📊</span>
+              <Landmark className="h-4.5 w-4.5 text-blue-500" />
               {isRtl ? 'شجرة الحسابات (دليل الحسابات)' : 'Chart of Accounts'}
             </h3>
             <div className="flex gap-2">
               <button onClick={handleExportAccounts}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
-                📥 {isRtl ? 'تصدير CSV' : 'Export CSV'}
+                {isRtl ? 'تصدير CSV' : 'Export CSV'}
               </button>
               <label className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
-                📤 {isRtl ? 'استيراد JSON' : 'Import JSON'}
+                {isRtl ? 'استيراد JSON' : 'Import JSON'}
                 <input type="file" accept=".json" className="hidden" onChange={handleImportAccounts} />
               </label>
               <button onClick={() => { setAccForm({ code: '', name_ar: '', name_en: '', type: 'asset', parent: '' }); setEditingAccId(null); setShowAccForm(true); }}
@@ -1453,14 +1572,14 @@ export const Settings: React.FC = () => {
           )}
 
           {/* Search */}
-          <input type="text" placeholder={isRtl ? '🔍 بحث في الحسابات...' : '🔍 Search accounts...'}
+          <input type="text" placeholder={isRtl ? 'بحث في الحسابات...' : 'Search accounts...'}
             value={accSearch} onChange={e => setAccSearch(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm focus:outline-none" />
 
           {/* Accounts table */}
           {accounts.length === 0 ? (
             <div className="text-center py-8 text-slate-400">
-              <div className="text-4xl mb-2">📋</div>
+              <History className="h-10 w-10 text-slate-400 mb-2 mx-auto" />
               <p className="text-sm font-bold">{isRtl ? 'لا توجد حسابات بعد' : 'No accounts yet'}</p>
               <p className="text-xs mt-1">{isRtl ? 'اضغط "إضافة حساب" لإنشاء دليل الحسابات' : 'Click "Add Account" to build your chart of accounts'}</p>
             </div>
@@ -1501,9 +1620,13 @@ export const Settings: React.FC = () => {
                       <td className="py-2">
                         <div className="flex gap-1 justify-end">
                           <button onClick={() => { setAccForm({code:a.code,name_ar:a.name_ar,name_en:a.name_en,type:a.type,parent:a.parent}); setEditingAccId(a.id); setShowAccForm(true); }}
-                            className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-colors">✏️</button>
+                            className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-colors flex items-center justify-center">
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
                           <button onClick={() => handleDeleteAccount(a.id)}
-                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors">🗑️</button>
+                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors flex items-center justify-center">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
