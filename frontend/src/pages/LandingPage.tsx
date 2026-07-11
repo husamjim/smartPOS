@@ -197,7 +197,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ language, changeLangua
       {/* Top Header Navigation */}
       <header className="w-full max-w-7xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-800/40">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="smart POS" className="h-10 w-10 object-contain filter drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]" />
+          <img src="./logo.png" alt="smart POS" className="h-10 w-10 object-contain filter drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]" />
           <span className="font-extrabold text-base tracking-wide bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 bg-clip-text text-transparent">
             {isRtl ? 'سمارت POS' : 'smart POS'}
           </span>

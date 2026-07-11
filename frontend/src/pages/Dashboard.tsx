@@ -185,7 +185,7 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Logo" className="h-16 w-16 object-contain" />
+          <img src="./logo.png" alt="Logo" className="h-16 w-16 object-contain" />
           <div>
             <h2 className="text-xl md:text-2xl font-bold font-sans">
               {isRtl ? 'لوحة التحكم والمؤشرات' : 'Performance Dashboard'}

@@ -200,7 +200,6 @@ export const POS: React.FC = () => {
   const [priceCheckProduct, setPriceCheckProduct] = useState<LocalProduct | null>(null);
 
   // Retail Sub-Mode & Supermarket/Wholesale custom states
-  const [retailSubMode, setRetailSubMode] = useState<'supermarket' | 'clothing'>('supermarket');
   const [numpadQty, setNumpadQty] = useState<number>(1);
   const [wholesaleRows, setWholesaleRows] = useState<Array<{
     id: string;
@@ -288,7 +287,7 @@ export const POS: React.FC = () => {
 
   // Sync wholesale spreadsheet table to the checkout cart
   useEffect(() => {
-    if (businessType === 'wholesale' && products.length > 0) {
+    if (businessType === 'electronics' && products.length > 0) {
       clearCart();
       wholesaleRows.forEach(row => {
         const prod = products.find(p => p.id === row.productId);
@@ -344,7 +343,7 @@ export const POS: React.FC = () => {
     // Dynamic Business Adaptations
     const finalProduct = { ...product };
 
-    if (businessType === 'retail') {
+    if (businessType === 'clothing') {
       const variant = localVariants[product.id] || { 
         size: availableSizes[0] || 'M', 
         color: availableColors[0] || 'Red' 
@@ -359,7 +358,7 @@ export const POS: React.FC = () => {
       setCustomModifierNote('');
       setShowModifierModal(true);
       return; // addToCart will be called after modal confirm
-    } else if (businessType === 'wholesale') {
+    } else if (businessType === 'electronics') {
       const convertedPrice = targetCurrency === 'USD' ? product.price / 3.75 : product.price;
       const customsAdjusted = convertedPrice * (1 + customsTariff / 100);
       finalProduct.price = parseFloat(customsAdjusted.toFixed(2));
@@ -440,33 +439,59 @@ export const POS: React.FC = () => {
   const getCategoriesForBusiness = () => {
     switch (businessType) {
       case 'restaurant':
-        return ['ALL', 'meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer'];
+        return ['ALL', 'meal', 'drink', 'dessert', 'addition', 'size', 'table', 'kitchen', 'item'];
+      case 'supermarket':
+        return ['ALL', 'food', 'cleaner', 'drink', 'frozen', 'bakery', 'vegetable', 'fruit'];
       case 'pharmacy':
-        return ['ALL', 'Pharmacy'];
-      case 'retail':
-        return ['ALL', 'Food', 'Clothing', 'Electronics'];
-      case 'wholesale':
-        return ['ALL', 'Food', 'Imported', 'Electronics'];
+        return ['ALL', 'medicine', 'supplement', 'cosmetic', 'medical_device', 'prescription', 'pharma_company'];
+      case 'clothing':
+        return ['ALL', 'men', 'women', 'kids', 'shoes', 'bags', 'size', 'color'];
+      case 'electronics':
+        return ['ALL', 'mobile', 'computer', 'accessory', 'printer', 'screen'];
       default:
-        return ['ALL', 'Food', 'Restaurant', 'Pharmacy'];
+        return ['ALL', 'food', 'medicine', 'clothing', 'electronics'];
     }
   };
 
   const getCategoryLabel = (cat: string) => {
     if (cat === 'ALL') return isRtl ? 'الكل' : 'All';
     switch (cat) {
+      // Restaurant
       case 'meal': return isRtl ? 'وجبات' : 'Meals';
-      case 'sandwich': return isRtl ? 'ساندوتشات' : 'Sandwiches';
       case 'drink': return isRtl ? 'مشروبات' : 'Drinks';
       case 'dessert': return isRtl ? 'حلويات' : 'Desserts';
-      case 'salad': return isRtl ? 'سلطات' : 'Salads';
-      case 'appetizer': return isRtl ? 'مقبلات' : 'Appetizers';
-      case 'raw_material': return isRtl ? 'مواد خام' : 'Raw Materials';
-      case 'Pharmacy': return isRtl ? 'صيدلية وأدوية' : 'Pharmacy';
-      case 'Food': return isRtl ? 'أغذية' : 'Food';
-      case 'Clothing': return isRtl ? 'ملابس' : 'Clothing';
-      case 'Electronics': return isRtl ? 'إلكترونيات' : 'Electronics';
-      case 'Imported': return isRtl ? 'مستوردات' : 'Imported';
+      case 'addition': return isRtl ? 'إضافات' : 'Additions';
+      case 'size': return isRtl ? 'أحجام' : 'Sizes';
+      case 'table': return isRtl ? 'طاولات' : 'Tables';
+      case 'kitchen': return isRtl ? 'مطبخ' : 'Kitchen';
+      case 'item': return isRtl ? 'أصناف' : 'Items';
+      // Supermarket
+      case 'food': return isRtl ? 'مواد غذائية' : 'Food Items';
+      case 'cleaner': return isRtl ? 'منظفات' : 'Cleaning Agents';
+      case 'frozen': return isRtl ? 'مجمدات' : 'Frozen Foods';
+      case 'bakery': return isRtl ? 'مخبوزات' : 'Bakery';
+      case 'vegetable': return isRtl ? 'خضروات' : 'Vegetables';
+      case 'fruit': return isRtl ? 'فواكه' : 'Fruits';
+      // Pharmacy
+      case 'medicine': return isRtl ? 'أدوية' : 'Medicines';
+      case 'supplement': return isRtl ? 'مكملات' : 'Supplements';
+      case 'cosmetic': return isRtl ? 'مستحضرات تجميل' : 'Cosmetics';
+      case 'medical_device': return isRtl ? 'أجهزة طبية' : 'Medical Devices';
+      case 'prescription': return isRtl ? 'وصفات' : 'Prescriptions';
+      case 'pharma_company': return isRtl ? 'شركات دواء' : 'Pharma Companies';
+      // Clothing
+      case 'men': return isRtl ? 'رجالي' : 'Men\'s Wear';
+      case 'women': return isRtl ? 'نسائي' : 'Women\'s Wear';
+      case 'kids': return isRtl ? 'أطفال' : 'Kids\' Wear';
+      case 'shoes': return isRtl ? 'أحذية' : 'Shoes';
+      case 'bags': return isRtl ? 'حقائب' : 'Bags';
+      case 'color': return isRtl ? 'ألوان' : 'Colors';
+      // Electronics
+      case 'mobile': return isRtl ? 'موبايلات' : 'Mobiles';
+      case 'computer': return isRtl ? 'كمبيوتر' : 'Computers';
+      case 'accessory': return isRtl ? 'إكسسوارات' : 'Accessories';
+      case 'printer': return isRtl ? 'طابعات' : 'Printers';
+      case 'screen': return isRtl ? 'شاشات' : 'Screens';
       default: return cat;
     }
   };
@@ -476,19 +501,20 @@ export const POS: React.FC = () => {
   const filteredProducts = products.filter(p => {
     // 1. Strict Business Type Product Isolation
     if (businessType === 'restaurant') {
-      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant'];
-      if (!restaurantCategories.includes(p.category)) {
-        return false;
-      }
+      const restaurantCategories = ['meal', 'drink', 'dessert', 'addition', 'size', 'table', 'kitchen', 'item'];
+      if (!restaurantCategories.includes(p.category)) return false;
+    } else if (businessType === 'supermarket') {
+      const supermarketCategories = ['food', 'cleaner', 'drink', 'frozen', 'bakery', 'vegetable', 'fruit'];
+      if (!supermarketCategories.includes(p.category)) return false;
     } else if (businessType === 'pharmacy') {
-      if (p.is_pharmaceutical !== 1) return false;
-    } else {
-      // retail, wholesale, or warehouse
-      // Exclude pharmacy products and restaurant products and raw materials
-      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant', 'raw_material'];
-      if (p.is_pharmaceutical === 1 || restaurantCategories.includes(p.category)) {
-        return false;
-      }
+      const pharmacyCategories = ['medicine', 'supplement', 'cosmetic', 'medical_device', 'prescription', 'pharma_company'];
+      if (!pharmacyCategories.includes(p.category) && p.is_pharmaceutical !== 1) return false;
+    } else if (businessType === 'clothing') {
+      const clothingCategories = ['men', 'women', 'kids', 'shoes', 'bags', 'size', 'color'];
+      if (!clothingCategories.includes(p.category)) return false;
+    } else if (businessType === 'electronics') {
+      const electronicsCategories = ['mobile', 'computer', 'accessory', 'printer', 'screen'];
+      if (!electronicsCategories.includes(p.category)) return false;
     }
 
     // 2. Category Tab Filter
@@ -710,7 +736,7 @@ export const POS: React.FC = () => {
 
       {/* Products Catalog Screen */}
       <div className="lg:col-span-2 flex flex-col space-y-4">
-        {businessType === 'wholesale' && (
+        {businessType === 'electronics' && (
           <div className="glass-card p-5 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 flex-1 flex flex-col justify-between space-y-4 animate-fade-in">
             <div>
               <div className="flex justify-between items-center border-b pb-3 mb-2">
@@ -883,26 +909,19 @@ export const POS: React.FC = () => {
           </div>
         )}
 
-        {businessType === 'retail' && retailSubMode === 'supermarket' && (
+        {businessType === 'supermarket' && (
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
             {/* Left Column: Categories and Fast Items */}
             <div className="glass-card p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 flex flex-col space-y-3">
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="font-extrabold text-xs">🍎 {isRtl ? 'سلع البيع السريع (سوبرماركت)' : 'Fast-Selling Items'}</span>
+                <span className="font-extrabold text-xs">{isRtl ? 'سلع البيع السريع (سوبرماركت)' : 'Fast-Selling Items'}</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setShowPriceChecker(true)}
                     className="px-2.5 py-1 rounded bg-blue-600/10 text-blue-500 hover:bg-blue-600/20 font-bold text-[9px] flex items-center gap-1 font-sans"
                   >
-                    🔍 {isRtl ? 'فاحص الأسعار' : 'Price Checker'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRetailSubMode('clothing')}
-                    className="px-2.5 py-1 rounded bg-indigo-600/10 text-indigo-500 hover:bg-indigo-600/20 font-bold text-[9px] flex items-center gap-1 font-sans"
-                  >
-                    👗 {isRtl ? 'وضع ملابس وبوتيك' : 'Clothing Boutique'}
+                    {isRtl ? 'فاحص الأسعار' : 'Price Checker'}
                   </button>
                 </div>
               </div>
@@ -981,18 +1000,18 @@ export const POS: React.FC = () => {
           </div>
         )}
 
-        {businessType === 'retail' && retailSubMode === 'clothing' && (
+        {businessType === 'clothing' && (
           <div className="flex-1 flex flex-col space-y-4 animate-fade-in">
             {/* Header toggles */}
             <div className="flex justify-between items-center bg-white/40 dark:bg-slate-900/40 p-3 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-              <span className="font-extrabold text-xs flex items-center gap-1.5">👕 {isRtl ? 'واجهة بوتيك ومعرض الملابس والملحقات:' : 'Fashion Clothing Boutique Terminal:'}</span>
+              <span className="font-extrabold text-xs flex items-center gap-1.5">{isRtl ? 'واجهة بوتيك ومعرض الملابس والملحقات:' : 'Fashion Clothing Boutique Terminal:'}</span>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowManageVariantsModal(true)}
                   className="px-2.5 py-1.5 rounded-xl bg-teal-650/10 text-teal-500 hover:bg-teal-600/20 font-bold text-[10px] flex items-center gap-1 font-sans"
                 >
-                  ⚙️ {isRtl ? 'إدارة المقاسات والألوان' : 'Sizes & Colors'}
+                  {isRtl ? 'إدارة المقاسات والألوان' : 'Sizes & Colors'}
                 </button>
                 {/* Price Checker Trigger Button */}
                 <button
@@ -1000,14 +1019,7 @@ export const POS: React.FC = () => {
                   onClick={() => setShowPriceChecker(true)}
                   className="px-2.5 py-1.5 rounded-xl bg-blue-600/10 text-blue-500 hover:bg-blue-600/20 font-bold text-[10px] flex items-center gap-1 font-sans"
                 >
-                  🔍 {isRtl ? 'فاحص الأسعار' : 'Price Checker'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRetailSubMode('supermarket')}
-                  className="px-2.5 py-1.5 rounded-xl bg-orange-600/10 text-orange-500 hover:bg-orange-600/20 font-bold text-[10px] flex items-center gap-1 shadow-sm font-sans"
-                >
-                  🛒 {isRtl ? 'وضع السوبرماركت السريع' : 'Supermarket Checkout'}
+                  {isRtl ? 'فاحص الأسعار' : 'Price Checker'}
                 </button>
               </div>
             </div>
@@ -1114,7 +1126,7 @@ export const POS: React.FC = () => {
         )}
 
         {/* Restaurant & Pharmacy Layouts (Generic catalog with widgets) */}
-        {((businessType !== 'wholesale' && businessType !== 'retail') || (businessType === 'retail' && retailSubMode !== 'supermarket' && retailSubMode !== 'clothing')) && (
+        {(businessType === 'restaurant' || businessType === 'pharmacy' || businessType === 'electronics') && (
           <>
             {/* Active Industry Custom Sub-panels */}
             {businessType === 'restaurant' && (

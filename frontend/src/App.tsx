@@ -712,10 +712,11 @@ export default function App() {
             </span>
             <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1 text-[10px] uppercase font-black font-sans">
               <Store className="h-3.5 w-3.5" />
-              {businessType === 'restaurant' ? (isRtl ? '🍽️ مطعم ومقهى' : 'Restaurant') :
-               businessType === 'pharmacy' ? (isRtl ? '💊 صيدلية وعيادة' : 'Pharmacy') :
-               businessType === 'retail' ? (isRtl ? '👕 متجر تجزئة' : 'Retail Store') :
-               (isRtl ? '🚢 استيراد وتصدير' : 'Import/Export')}
+              {businessType === 'restaurant' ? (isRtl ? 'مطعم ومقهى' : 'Restaurant & Café') :
+               businessType === 'supermarket' ? (isRtl ? 'سوبر ماركت' : 'Supermarket') :
+               businessType === 'pharmacy' ? (isRtl ? 'صيدلية وعيادة' : 'Pharmacy') :
+               businessType === 'clothing' ? (isRtl ? 'ملابس وأحذية' : 'Clothing Store') :
+               (isRtl ? 'إلكترونيات وأجهزة' : 'Electronics Store')}
             </span>
           </div>
 

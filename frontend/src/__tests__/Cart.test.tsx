@@ -14,7 +14,7 @@ vi.mock('../context/AppContext', () => {
       selectedBranch: mockBranch,
       isOnline: true,
       taxPercentage: 15,
-      businessType: 'retail',
+      businessType: 'clothing',
       currentUser: mockUser
     }),
     seedLocalDbIfEmpty: vi.fn(),

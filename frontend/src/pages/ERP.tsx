@@ -597,18 +597,20 @@ export const ERP: React.FC = () => {
   const filteredProducts = products.filter(p => {
     // Strict Business Type Product Isolation for ERP
     if (businessType === 'restaurant') {
-      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant', 'raw_material'];
-      if (!restaurantCategories.includes(p.category)) {
-        return false;
-      }
+      const restaurantCategories = ['meal', 'drink', 'dessert', 'addition', 'size', 'table', 'kitchen', 'item', 'raw_material'];
+      if (!restaurantCategories.includes(p.category)) return false;
+    } else if (businessType === 'supermarket') {
+      const supermarketCategories = ['food', 'cleaner', 'drink', 'frozen', 'bakery', 'vegetable', 'fruit'];
+      if (!supermarketCategories.includes(p.category)) return false;
     } else if (businessType === 'pharmacy') {
-      if (p.is_pharmaceutical !== 1) return false;
-    } else {
-      // retail, wholesale or warehouse
-      const restaurantCategories = ['meal', 'sandwich', 'drink', 'dessert', 'salad', 'appetizer', 'Restaurant'];
-      if (p.is_pharmaceutical === 1 || (businessType !== 'warehouse' && restaurantCategories.includes(p.category))) {
-        return false;
-      }
+      const pharmacyCategories = ['medicine', 'supplement', 'cosmetic', 'medical_device', 'prescription', 'pharma_company'];
+      if (!pharmacyCategories.includes(p.category) && p.is_pharmaceutical !== 1) return false;
+    } else if (businessType === 'clothing') {
+      const clothingCategories = ['men', 'women', 'kids', 'shoes', 'bags', 'size', 'color'];
+      if (!clothingCategories.includes(p.category)) return false;
+    } else if (businessType === 'electronics') {
+      const electronicsCategories = ['mobile', 'computer', 'accessory', 'printer', 'screen'];
+      if (!electronicsCategories.includes(p.category)) return false;
     }
 
     return (
@@ -676,7 +678,7 @@ export const ERP: React.FC = () => {
               {isRtl ? 'التصاريح الطبية والبدائل' : 'SFDA & Substitutions'}
             </button>
           )}
-          {businessType === 'retail' && (
+          {businessType === 'clothing' && (
             <button
               onClick={() => setActiveSubTab('variants')}
               className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'variants' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
@@ -684,7 +686,7 @@ export const ERP: React.FC = () => {
               {isRtl ? 'مصفوفة المقاسات والألوان' : 'SKU Variant Matrix'}
             </button>
           )}
-          {businessType === 'wholesale' && (
+          {businessType === 'electronics' && (
             <button
               onClick={() => setActiveSubTab('shipments')}
               className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'shipments' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
@@ -1514,7 +1516,7 @@ export const ERP: React.FC = () => {
           </div>
         )}
 
-        {activeSubTab === 'variants' && businessType === 'retail' && (
+        {activeSubTab === 'variants' && businessType === 'clothing' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
             {/* Generate Matrix form */}
             <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
@@ -1743,7 +1745,7 @@ export const ERP: React.FC = () => {
           </div>
         )}
 
-        {activeSubTab === 'shipments' && businessType === 'wholesale' && (
+        {activeSubTab === 'shipments' && businessType === 'electronics' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
             {/* Log container shipment */}
             <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
@@ -1910,9 +1912,10 @@ export const ERP: React.FC = () => {
                 {isRtl ? 'إضافة منتج جديد وتوليد باركود تلقائي' : 'Register New ERP Product'}
               </h3>
               <span className="text-[10px] text-indigo-500 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">
-                {businessType === 'restaurant' ? (isRtl ? '🍽️ مطعم' : 'Restaurant') :
-                 businessType === 'pharmacy' ? (isRtl ? '💊 صيدلية' : 'Pharmacy') :
-                 businessType === 'retail' ? (isRtl ? '👕 تجزئة' : 'Retail') : (isRtl ? '🚢 جملة' : 'Wholesale')}
+                {businessType === 'restaurant' ? (isRtl ? 'مطعم' : 'Restaurant') :
+                 businessType === 'supermarket' ? (isRtl ? 'سوبر ماركت' : 'Supermarket') :
+                 businessType === 'pharmacy' ? (isRtl ? 'صيدلية' : 'Pharmacy') :
+                 businessType === 'clothing' ? (isRtl ? 'ملابس' : 'Clothing') : (isRtl ? 'إلكترونيات' : 'Electronics')}
               </span>
             </div>
 
@@ -2132,29 +2135,55 @@ export const ERP: React.FC = () => {
                     {businessType === 'restaurant' && (
                       <>
                         <option value="meal">{isRtl ? 'وجبة رئيسية' : 'Main Meal'}</option>
-                        <option value="sandwich">{isRtl ? 'ساندوتش' : 'Sandwich'}</option>
                         <option value="drink">{isRtl ? 'مشروبات وعصائر' : 'Drink / Beverage'}</option>
                         <option value="dessert">{isRtl ? 'حلويات' : 'Dessert'}</option>
-                        <option value="salad">{isRtl ? 'سلطة' : 'Salad'}</option>
-                        <option value="appetizer">{isRtl ? 'مقبلات' : 'Appetizer'}</option>
+                        <option value="addition">{isRtl ? 'إضافات' : 'Additions'}</option>
+                        <option value="size">{isRtl ? 'أحجام' : 'Sizes'}</option>
+                        <option value="table">{isRtl ? 'طاولات' : 'Tables'}</option>
+                        <option value="kitchen">{isRtl ? 'مطبخ' : 'Kitchen'}</option>
+                        <option value="item">{isRtl ? 'أصناف' : 'Items'}</option>
                         <option value="raw_material">{isRtl ? 'مواد خام للمطبخ' : 'Kitchen Raw Material'}</option>
                       </>
                     )}
-                    {businessType === 'pharmacy' && (
-                      <option value="Pharmacy">{isRtl ? 'صيدلية وأدوية' : 'Pharmacy'}</option>
-                    )}
-                    {businessType === 'retail' && (
+                    {businessType === 'supermarket' && (
                       <>
-                        <option value="Food">{isRtl ? 'أغذية ومأكولات' : 'Retail Food'}</option>
-                        <option value="Clothing">{isRtl ? 'ملابس وأزياء' : 'Clothing'}</option>
-                        <option value="Electronics">{isRtl ? 'إلكترونيات' : 'Electronics'}</option>
+                        <option value="food">{isRtl ? 'مواد غذائية' : 'Food Items'}</option>
+                        <option value="cleaner">{isRtl ? 'منظفات' : 'Cleaning Agents'}</option>
+                        <option value="drink">{isRtl ? 'مشروبات' : 'Drinks'}</option>
+                        <option value="frozen">{isRtl ? 'مجمدات' : 'Frozen Foods'}</option>
+                        <option value="bakery">{isRtl ? 'مخبوزات' : 'Bakery'}</option>
+                        <option value="vegetable">{isRtl ? 'خضروات' : 'Vegetables'}</option>
+                        <option value="fruit">{isRtl ? 'فواكه' : 'Fruits'}</option>
                       </>
                     )}
-                    {businessType === 'wholesale' && (
+                    {businessType === 'pharmacy' && (
                       <>
-                        <option value="Food">{isRtl ? 'أغذية بالجملة' : 'Wholesale Food'}</option>
-                        <option value="Imported">{isRtl ? 'بضائع مستوردة' : 'Imported Goods'}</option>
-                        <option value="Electronics">{isRtl ? 'إلكترونيات' : 'Electronics'}</option>
+                        <option value="medicine">{isRtl ? 'أدوية' : 'Medicines'}</option>
+                        <option value="supplement">{isRtl ? 'مكملات' : 'Supplements'}</option>
+                        <option value="cosmetic">{isRtl ? 'مستحضرات تجميل' : 'Cosmetics'}</option>
+                        <option value="medical_device">{isRtl ? 'أجهزة طبية' : 'Medical Devices'}</option>
+                        <option value="prescription">{isRtl ? 'وصفات' : 'Prescriptions'}</option>
+                        <option value="pharma_company">{isRtl ? 'شركات دواء' : 'Pharma Companies'}</option>
+                      </>
+                    )}
+                    {businessType === 'clothing' && (
+                      <>
+                        <option value="men">{isRtl ? 'رجالي' : 'Men\'s Wear'}</option>
+                        <option value="women">{isRtl ? 'نسائي' : 'Women\'s Wear'}</option>
+                        <option value="kids">{isRtl ? 'أطفال' : 'Kids\' Wear'}</option>
+                        <option value="shoes">{isRtl ? 'أحذية' : 'Shoes'}</option>
+                        <option value="bags">{isRtl ? 'حقائب' : 'Bags'}</option>
+                        <option value="size">{isRtl ? 'مقاسات' : 'Sizes'}</option>
+                        <option value="color">{isRtl ? 'ألوان' : 'Colors'}</option>
+                      </>
+                    )}
+                    {businessType === 'electronics' && (
+                      <>
+                        <option value="mobile">{isRtl ? 'موبايلات' : 'Mobiles'}</option>
+                        <option value="computer">{isRtl ? 'كمبيوتر' : 'Computers'}</option>
+                        <option value="accessory">{isRtl ? 'إكسسوارات' : 'Accessories'}</option>
+                        <option value="printer">{isRtl ? 'طابعات' : 'Printers'}</option>
+                        <option value="screen">{isRtl ? 'شاشات' : 'Screens'}</option>
                       </>
                     )}
                   </select>
@@ -2174,29 +2203,55 @@ export const ERP: React.FC = () => {
                   {businessType === 'restaurant' && (
                     <>
                       <option value="meal">{isRtl ? 'وجبة رئيسية' : 'Main Meal'}</option>
-                      <option value="sandwich">{isRtl ? 'ساندوتش' : 'Sandwich'}</option>
                       <option value="drink">{isRtl ? 'مشروبات وعصائر' : 'Drink / Beverage'}</option>
                       <option value="dessert">{isRtl ? 'حلويات' : 'Dessert'}</option>
-                      <option value="salad">{isRtl ? 'سلطة' : 'Salad'}</option>
-                      <option value="appetizer">{isRtl ? 'مقبلات' : 'Appetizer'}</option>
+                      <option value="addition">{isRtl ? 'إضافات' : 'Additions'}</option>
+                      <option value="size">{isRtl ? 'أحجام' : 'Sizes'}</option>
+                      <option value="table">{isRtl ? 'طاولات' : 'Tables'}</option>
+                      <option value="kitchen">{isRtl ? 'مطبخ' : 'Kitchen'}</option>
+                      <option value="item">{isRtl ? 'أصناف' : 'Items'}</option>
                       <option value="raw_material">{isRtl ? 'مواد خام للمطبخ' : 'Kitchen Raw Material'}</option>
                     </>
                   )}
-                  {businessType === 'pharmacy' && (
-                    <option value="Pharmacy">{isRtl ? 'صيدلية وأدوية' : 'Pharmacy'}</option>
-                  )}
-                  {businessType === 'retail' && (
+                  {businessType === 'supermarket' && (
                     <>
-                      <option value="Food">{isRtl ? 'أغذية ومأكولات' : 'Retail Food'}</option>
-                      <option value="Clothing">{isRtl ? 'ملابس وأزياء' : 'Clothing'}</option>
-                      <option value="Electronics">{isRtl ? 'إلكترونيات' : 'Electronics'}</option>
+                      <option value="food">{isRtl ? 'مواد غذائية' : 'Food Items'}</option>
+                      <option value="cleaner">{isRtl ? 'منظفات' : 'Cleaning Agents'}</option>
+                      <option value="drink">{isRtl ? 'مشروبات' : 'Drinks'}</option>
+                      <option value="frozen">{isRtl ? 'مجمدات' : 'Frozen Foods'}</option>
+                      <option value="bakery">{isRtl ? 'مخبوزات' : 'Bakery'}</option>
+                      <option value="vegetable">{isRtl ? 'خضروات' : 'Vegetables'}</option>
+                      <option value="fruit">{isRtl ? 'فواكه' : 'Fruits'}</option>
                     </>
                   )}
-                  {businessType === 'wholesale' && (
+                  {businessType === 'pharmacy' && (
                     <>
-                      <option value="Food">{isRtl ? 'أغذية بالجملة' : 'Wholesale Food'}</option>
-                      <option value="Imported">{isRtl ? 'بضائع مستوردة' : 'Imported Goods'}</option>
-                      <option value="Electronics">{isRtl ? 'إلكترونيات' : 'Electronics'}</option>
+                      <option value="medicine">{isRtl ? 'أدوية' : 'Medicines'}</option>
+                      <option value="supplement">{isRtl ? 'مكملات' : 'Supplements'}</option>
+                      <option value="cosmetic">{isRtl ? 'مستحضرات تجميل' : 'Cosmetics'}</option>
+                      <option value="medical_device">{isRtl ? 'أجهزة طبية' : 'Medical Devices'}</option>
+                      <option value="prescription">{isRtl ? 'وصفات' : 'Prescriptions'}</option>
+                      <option value="pharma_company">{isRtl ? 'شركات دواء' : 'Pharma Companies'}</option>
+                    </>
+                  )}
+                  {businessType === 'clothing' && (
+                    <>
+                      <option value="men">{isRtl ? 'رجالي' : 'Men\'s Wear'}</option>
+                      <option value="women">{isRtl ? 'نسائي' : 'Women\'s Wear'}</option>
+                      <option value="kids">{isRtl ? 'أطفال' : 'Kids\' Wear'}</option>
+                      <option value="shoes">{isRtl ? 'أحذية' : 'Shoes'}</option>
+                      <option value="bags">{isRtl ? 'حقائب' : 'Bags'}</option>
+                      <option value="size">{isRtl ? 'مقاسات' : 'Sizes'}</option>
+                      <option value="color">{isRtl ? 'ألوان' : 'Colors'}</option>
+                    </>
+                  )}
+                  {businessType === 'electronics' && (
+                    <>
+                      <option value="mobile">{isRtl ? 'موبايلات' : 'Mobiles'}</option>
+                      <option value="computer">{isRtl ? 'كمبيوتر' : 'Computers'}</option>
+                      <option value="accessory">{isRtl ? 'إكسسوارات' : 'Accessories'}</option>
+                      <option value="printer">{isRtl ? 'طابعات' : 'Printers'}</option>
+                      <option value="screen">{isRtl ? 'شاشات' : 'Screens'}</option>
                     </>
                   )}
                 </select>

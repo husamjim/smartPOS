@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings as SettingsIcon, Languages, Sun, Moon, ToggleLeft, ToggleRight, Database, Printer, HardDrive, Users, UserPlus, Trash2, Edit3, Eye, EyeOff, Image, Shield, Receipt, Brain, Landmark, History, Bell, RotateCw, HelpCircle, Info, Palette, Store } from 'lucide-react';
+import { Settings as SettingsIcon, Languages, Sun, Moon, ToggleLeft, ToggleRight, Database, Printer, HardDrive, Users, UserPlus, Trash2, Edit3, Eye, EyeOff, Image, Shield, Receipt, Brain, Landmark, History, Bell, RotateCw, HelpCircle, Info, Palette, Store, Shirt } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { db, seedLocalDbIfEmpty } from '../db/localDb';
 import { HardwareService } from '../services/hardware';
@@ -1022,10 +1022,10 @@ export const Settings: React.FC = () => {
       )}
 
       {/* Clothing Retail Customization settings (Conditionally shown) */}
-      {settingsTab === 'general' && businessType === 'retail' && (
+      {settingsTab === 'general' && businessType === 'clothing' && (
         <div className="glass-card p-5 rounded-2xl shadow-sm space-y-6 animate-fade-in">
           <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
-            <span className="text-xl">👕</span>
+            <Shirt className="h-4.5 w-4.5 text-blue-500" />
             {isRtl ? 'إعدادات مقاسات وألوان منتجات الملابس' : 'Clothing Boutique Variants Configuration'}
           </h3>
 

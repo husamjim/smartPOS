@@ -5,7 +5,6 @@ import {
   ChefHat, 
   Pill, 
   Shirt, 
-  Ship, 
   Sparkles, 
   ArrowRight, 
   ArrowLeft, 
@@ -62,38 +61,38 @@ export const BusinessSelector: React.FC = () => {
       color: 'from-orange-500 to-amber-600 border-orange-500/20'
     },
     {
+      id: 'supermarket' as BusinessType,
+      title_ar: 'السوبر ماركت والبقالة',
+      title_en: 'Supermarkets & Groceries',
+      desc_ar: 'مواد غذائية، منظفات، مشروبات، مجمدات، مخبوزات، خضروات، وفواكه.',
+      desc_en: 'Food items, cleaning agents, drinks, frozen products, bakery, and fresh fruits & vegetables.',
+      icon: Store,
+      color: 'from-teal-500 to-emerald-600 border-teal-500/20'
+    },
+    {
       id: 'pharmacy' as BusinessType,
       title_ar: 'الصيدليات والمراكز الطبية',
       title_en: 'Pharmacies & Medical Centers',
       desc_ar: 'تتبع الباتشات والتواريخ، البدائل العلمية للأدوية، وتنبيهات انتهاء الصلاحية.',
       desc_en: 'Batch tracking, drug scientific substitutions, expiry indicators, and prescription logs.',
       icon: Pill,
-      color: 'from-blue-500 to-emerald-600 border-blue-500/20'
+      color: 'from-blue-500 to-indigo-600 border-blue-500/20'
     },
     {
-      id: 'retail' as BusinessType,
-      title_ar: 'التجزئة ومحلات الملابس',
-      title_en: 'Retail & Clothing Stores',
-      desc_ar: 'إدارة مقاسات وألوان السلع، طباعة ملصقات الباركود، وإتمام مبيعات التجزئة السريعة.',
-      desc_en: 'Inventory metrics by sizes and colors, custom barcode labels printing, and retail workflows.',
+      id: 'clothing' as BusinessType,
+      title_ar: 'محلات الملابس والأحذية',
+      title_en: 'Clothing & Shoe Stores',
+      desc_ar: 'إدارة السلع حسب المقاسات والألوان، طباعة ملصقات التجزئة السريعة والباركود.',
+      desc_en: 'Manage item variations by size and color, print tags, and run swift fashion checkouts.',
       icon: Shirt,
       color: 'from-purple-500 to-pink-600 border-purple-500/20'
     },
     {
-      id: 'wholesale' as BusinessType,
-      title_ar: 'الاستيراد والتصدير والجملة',
-      title_en: 'Import, Export & Wholesale',
-      desc_ar: 'تتبع شحنات الحاويات، حساب جمارك الموانئ، والتحويل متعدد العملات للطلبيات الضخمة.',
-      desc_en: 'Container cargo shipping tracker, customs tariff calculations, and multi-currency registers.',
-      icon: Ship,
-      color: 'from-teal-500 to-emerald-600 border-teal-500/20'
-    },
-    {
-      id: 'warehouse' as BusinessType,
-      title_ar: 'المستودعات والمخازن والخدمات اللوجستية',
-      title_en: 'Warehouses, Stock & Logistics',
-      desc_ar: 'إدارة المخزون متعدد الفروع والمواقع، جرد البضائع بالباركود، وطباعة ملصقات الرفوف.',
-      desc_en: 'Multi-location inventory tracking, barcode physical audits, stock adjustments, and bin labels.',
+      id: 'electronics' as BusinessType,
+      title_ar: 'معارض الإلكترونيات والأجهزة',
+      title_en: 'Electronics & Computer Showrooms',
+      desc_ar: 'موبايلات، أجهزة كمبيوتر، طابعات، شاشات، وإكسسوارات مع تتبع الأرقام التسلسلية.',
+      desc_en: 'Phones, computers, screens, printers, and accessories with serial number tracking.',
       icon: Warehouse,
       color: 'from-blue-600 to-cyan-600 border-blue-500/20'
     }
@@ -139,7 +138,7 @@ export const BusinessSelector: React.FC = () => {
         
         {/* Top brand header */}
         <div className="text-center space-y-3">
-          <img src="/logo.png" alt="smart POS Logo" className="h-36 mx-auto object-contain mb-4 filter drop-shadow-[0_0_20px_rgba(59,130,246,0.25)]" />
+          <img src="./logo.png" alt="smart POS Logo" className="h-36 mx-auto object-contain mb-4 filter drop-shadow-[0_0_20px_rgba(59,130,246,0.25)]" />
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold animate-pulse">
             <Sparkles className="h-3.5 w-3.5" />
             {isRtl ? 'إعداد وتهيئة نظام smart POS الذكي' : 'Setup smart POS Intelligent System'}
