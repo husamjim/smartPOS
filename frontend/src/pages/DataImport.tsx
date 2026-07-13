@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { Download, Upload, AlertTriangle, Undo2, Play } from 'lucide-react';
 import { downloadCSVTemplate } from '../utils/csvTemplates';
@@ -14,6 +15,7 @@ interface ValidationError {
 }
 
 export const DataImport: React.FC = () => {
+  const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [entityType, setEntityType] = useState<EntityType>('products');
   const [parsedData, setParsedData] = useState<any[]>([]);
@@ -94,7 +96,7 @@ export const DataImport: React.FC = () => {
       };
       reader.readAsArrayBuffer(file);
     } else {
-      alert(isRtl ? 'ملف غير مدعوم! الرجاء رفع ملف CSV أو Excel.' : 'Unsupported format! Upload CSV or Excel.');
+      alert(t('unsupported_format_upload_csv_or_excel'));
     }
   };
 
@@ -191,17 +193,17 @@ export const DataImport: React.FC = () => {
       // Price / Cost validation for products
       if (entityType === 'products') {
         if (row['price'] && isNaN(Number(row['price']))) {
-          detectedErrors.push({ row: index + 2, col: 'price', message: isRtl ? 'السعر يجب أن يكون رقماً.' : 'Price must be a number.' });
+          detectedErrors.push({ row: index + 2, col: 'price', message: t('price_must_be_a_number') });
         }
         if (row['cost'] && isNaN(Number(row['cost']))) {
-          detectedErrors.push({ row: index + 2, col: 'cost', message: isRtl ? 'التكلفة يجب أن تكون رقماً.' : 'Cost must be a number.' });
+          detectedErrors.push({ row: index + 2, col: 'cost', message: t('cost_must_be_a_number') });
         }
       }
 
       // Quantity validation for inventory
       if (entityType === 'inventory') {
         if (row['quantity'] && isNaN(Number(row['quantity']))) {
-          detectedErrors.push({ row: index + 2, col: 'quantity', message: isRtl ? 'الكمية يجب أن تكون رقماً.' : 'Quantity must be a number.' });
+          detectedErrors.push({ row: index + 2, col: 'quantity', message: t('quantity_must_be_a_number') });
         }
       }
     });
@@ -213,7 +215,7 @@ export const DataImport: React.FC = () => {
 
   const handleImport = async () => {
     if (errors.length > 0) {
-      alert(isRtl ? 'الرجاء إصلاح أخطاء التحقق قبل المتابعة!' : 'Please fix validation errors before proceeding!');
+      alert(t('please_fix_validation_errors_before_proceeding'));
       return;
     }
 
@@ -304,7 +306,7 @@ export const DataImport: React.FC = () => {
           const batch = {
             id: `b_${Math.random().toString(36).substring(2, 9)}`,
             product_id: row.product_id,
-            warehouse_id: row.warehouse_id || 'wh_riyadh_1',
+            warehouse_id: row.warehouse_id || 'wh_main_1',
             batch_number: row.batch_number || 'DEFAULT-BATCH',
             expiry_date: row.expiry_date || '',
             quantity: parseFloat(row.quantity) || 0
@@ -324,6 +326,7 @@ export const DataImport: React.FC = () => {
           };
           savedBranches.push(branch);
           importedIds.push(branch.id);
+          AuditLogger.log('CREATE_BRANCH', 'branches', `Imported branch profile: ${branch.name_en} (${branch.name_ar})`, 'success', branch.id);
         }
         localStorage.setItem('pos_custom_branches', JSON.stringify(savedBranches));
       }
@@ -365,7 +368,7 @@ export const DataImport: React.FC = () => {
       }
 
       AuditLogger.log('IMPORT_DATA', table, `Rolled back import of ${ids.length} rows from ${table}`, 'warning');
-      alert(isRtl ? 'تم التراجع عن عملية الاستيراد وحذف البيانات بنجاح.' : 'Rollback completed. Imported rows removed.');
+      alert(t('rollback_completed_imported_rows_removed'));
       setLastImportedIds(null);
       setStep(1);
     } catch (err: any) {
@@ -378,7 +381,7 @@ export const DataImport: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <h2 className="text-xl font-bold">{isRtl ? 'استيراد البيانات لأول مرة' : 'Data Import Wizard'}</h2>
+          <h2 className="text-xl font-bold">{t('data_import_wizard')}</h2>
           <p className="text-xs text-slate-400 mt-1">{isRtl ? 'قم بتهيئة متجرك محلياً برفع ملفات العملاء، الموردين والمنتجات بضغطة واحدة.' : 'Quickly configure your store by importing products, customers, suppliers, and ledger cards.'}</p>
         </div>
         {lastImportedIds && (
@@ -387,7 +390,7 @@ export const DataImport: React.FC = () => {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
           >
             <Undo2 className="h-4 w-4" />
-            {isRtl ? 'تراجع عن آخر استيراد' : 'Rollback Last Import'}
+            {t('rollback_last_import')}
           </button>
         )}
       </div>
@@ -416,7 +419,7 @@ export const DataImport: React.FC = () => {
       {step === 1 && (
         <div className="space-y-6">
           <div className="text-center">
-            <h3 className="font-bold text-sm text-slate-500">{isRtl ? 'الخطوة 1: اختر نوع البيانات التي تريد استيرادها' : 'Step 1: Choose data type to import'}</h3>
+            <h3 className="font-bold text-sm text-slate-500">{t('step_1_choose_data_type_to_import')}</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(entityMetadata).map(([key, meta]) => (
@@ -427,7 +430,7 @@ export const DataImport: React.FC = () => {
                   setStep(2);
                 }}
                 className="glass-card p-5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 text-right hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all text-right flex flex-col justify-between h-32"
-                dir={isRtl ? 'rtl' : 'ltr'}
+                dir={t('ltr')}
               >
                 <div>
                   <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">{isRtl ? meta.titleAr : meta.titleEn}</h4>
@@ -435,7 +438,7 @@ export const DataImport: React.FC = () => {
                 </div>
                 <div className="text-left w-full">
                   <span className="text-[10px] font-bold text-indigo-500 flex items-center justify-end gap-1">
-                    {isRtl ? 'البدء والتنزيل ←' : 'Configure →'}
+                    {t('configure')}
                   </span>
                 </div>
               </button>
@@ -447,24 +450,24 @@ export const DataImport: React.FC = () => {
       {/* Step 2: Download Template / Upload File */}
       {step === 2 && (
         <div className="glass-card p-6 rounded-3xl border border-slate-200/40 dark:border-slate-800/40 space-y-6">
-          <div className="flex justify-between items-center border-b pb-3" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="flex justify-between items-center border-b pb-3" dir={t('ltr')}>
             <h3 className="font-bold text-sm flex items-center gap-1.5">
               <span>⬇️</span>
-              {isRtl ? 'الخطوة 2: تحميل القالب ورفع الملف' : 'Step 2: Template & File Upload'}
+              {t('step_2_template_file_upload')}
             </h3>
             <button
               onClick={() => setStep(1)}
               className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
-              {isRtl ? '← رجوع لتحديد البيانات' : '← Back'}
+              {t('back_1')}
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" dir={t('ltr')}>
             {/* Download Template */}
             <div className="p-5 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-4 flex flex-col justify-between">
               <div>
-                <h4 className="font-bold text-xs text-indigo-600 dark:text-indigo-400">{isRtl ? '1. تحميل قالب CSV المعتمد' : '1. Download standard CSV template'}</h4>
+                <h4 className="font-bold text-xs text-indigo-600 dark:text-indigo-400">{t('1_download_standard_csv_template')}</h4>
                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                   {isRtl 
                     ? 'يحتوي الملف على الترويسات الصحيحة المطلوبة للنظام. قم بملء الحقول ثم حفظه لرفعه.'
@@ -476,14 +479,14 @@ export const DataImport: React.FC = () => {
                 className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                {isRtl ? 'تحميل قالب CSV' : 'Download Template'}
+                {t('download_template')}
               </button>
             </div>
 
             {/* Upload File */}
             <div className="p-5 rounded-2xl bg-slate-500/5 border border-slate-500/10 space-y-4 flex flex-col justify-between">
               <div>
-                <h4 className="font-bold text-xs text-slate-600 dark:text-slate-400">{isRtl ? '2. رفع الملف المعد' : '2. Upload filled sheet'}</h4>
+                <h4 className="font-bold text-xs text-slate-600 dark:text-slate-400">{t('2_upload_filled_sheet')}</h4>
                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                   {isRtl 
                     ? 'يدعم النظام استيراد ملفات CSV وملفات Excel المباشرة (.xlsx, .xls).'
@@ -492,7 +495,7 @@ export const DataImport: React.FC = () => {
               </div>
               <label className="w-full py-2.5 rounded-xl border border-dashed border-slate-350 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2">
                 <Upload className="h-4 w-4 text-slate-400" />
-                <span>{fileName ? fileName : (isRtl ? 'اختر ملف CSV / Excel' : 'Choose CSV / Excel File')}</span>
+                <span>{fileName ? fileName : (t('choose_csv_excel_file'))}</span>
                 <input type="file" accept=".csv, .xlsx, .xls" className="hidden" onChange={handleFileUpload} />
               </label>
             </div>
@@ -504,21 +507,21 @@ export const DataImport: React.FC = () => {
       {step === 3 && (
         <div className="space-y-6">
           {/* Summary / Controls */}
-          <div className="flex justify-between items-center glass-card p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="flex justify-between items-center glass-card p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40" dir={t('ltr')}>
             <div className="flex items-center gap-3">
               <span className={`px-2 py-1 rounded-lg text-xs font-bold ${errors.length > 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                 {errors.length > 0 
                   ? (isRtl ? `⚠️ وجد ${errors.length} أخطاء` : `⚠️ Found ${errors.length} errors`)
-                  : (isRtl ? '✓ جاهز للاستيراد' : '✓ Ready to import')}
+                  : (t('ready_to_import'))}
               </span>
-              <span className="text-xs text-slate-400 font-bold font-mono">({parsedData.length} {isRtl ? 'صفاً مكتشفاً' : 'rows parsed'})</span>
+              <span className="text-xs text-slate-400 font-bold font-mono">({parsedData.length} {t('rows_parsed')})</span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setStep(2)}
                 className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
               >
-                {isRtl ? '← تغيير الملف' : '← Change File'}
+                {t('change_file')}
               </button>
               <button
                 onClick={handleImport}
@@ -526,17 +529,17 @@ export const DataImport: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
               >
                 {importing ? <span className="animate-spin">⟳</span> : <Play className="h-3.5 w-3.5" />}
-                {isRtl ? 'تنفيذ الاستيراد الآن' : 'Execute Import'}
+                {t('execute_import')}
               </button>
             </div>
           </div>
 
           {/* Validation Errors Panel */}
           {errors.length > 0 && (
-            <div className="p-4 bg-red-500/5 border border-red-500/15 rounded-2xl space-y-2 text-xs" dir={isRtl ? 'rtl' : 'ltr'}>
+            <div className="p-4 bg-red-500/5 border border-red-500/15 rounded-2xl space-y-2 text-xs" dir={t('ltr')}>
               <h4 className="font-bold text-red-500 flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4" />
-                {isRtl ? 'قائمة الأخطاء المكتشفة في الملف (يجب إصلاحها أولاً):' : 'Validation Errors (requires correction):'}
+                {t('validation_errors_requires_correction')}
               </h4>
               <div className="max-h-36 overflow-y-auto divide-y divide-red-500/10">
                 {errors.map((err, idx) => (
@@ -550,9 +553,9 @@ export const DataImport: React.FC = () => {
 
           {/* Table Preview */}
           <div className="glass-card p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 overflow-hidden">
-            <h4 className="font-bold text-xs text-slate-400 mb-3" dir={isRtl ? 'rtl' : 'ltr'}>📋 {isRtl ? 'معاينة البيانات قبل الحفظ:' : 'Data Sheet Preview:'}</h4>
+            <h4 className="font-bold text-xs text-slate-400 mb-3" dir={t('ltr')}>📋 {t('data_sheet_preview')}</h4>
             <div className="overflow-x-auto max-h-[300px]">
-              <table className="w-full text-xs text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+              <table className="w-full text-xs text-right" dir={t('ltr')}>
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-850">
                     <th className="py-2 text-center text-slate-400 w-10">#</th>
@@ -587,7 +590,7 @@ export const DataImport: React.FC = () => {
               </table>
             </div>
             {parsedData.length > 100 && (
-              <p className="text-[10px] text-slate-400 text-center mt-3">* {isRtl ? 'يتم عرض أول 100 صف فقط للمعاينة.' : 'Previewing first 100 rows only.'}</p>
+              <p className="text-[10px] text-slate-400 text-center mt-3">* {t('previewing_first_100_rows_only')}</p>
             )}
           </div>
         </div>
@@ -600,7 +603,7 @@ export const DataImport: React.FC = () => {
             ✓
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{isRtl ? 'تم استيراد البيانات بنجاح!' : 'Data Imported Successfully!'}</h3>
+            <h3 className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{t('data_imported_successfully')}</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
               {isRtl 
                 ? `تم كتابة وحفظ ${lastImportedIds?.ids.length} سجل في قاعدة البيانات المحلية المشفرة للمتجر.`
@@ -612,7 +615,7 @@ export const DataImport: React.FC = () => {
               onClick={handleRollback}
               className="flex-1 py-2 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
             >
-              {isRtl ? 'تراجع وحذف' : 'Rollback & Undo'}
+              {t('rollback_undo')}
             </button>
             <button
               onClick={() => {
@@ -622,7 +625,7 @@ export const DataImport: React.FC = () => {
               }}
               className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm"
             >
-              {isRtl ? 'إنهاء واستيراد آخر' : 'Import More'}
+              {t('import_more')}
             </button>
           </div>
         </div>

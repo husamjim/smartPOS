@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../db/localDb';
 import type { LocalProduct, LocalCustomer, LocalBatch, LocalOrder, LocalOrderItem } from '../db/localDb';
 import { useApp } from './AppContext';
+import { AuditLogger } from '../utils/auditLogger';
 
 export interface CartItem {
   product: LocalProduct;
@@ -45,7 +46,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { selectedBranch, isOnline, taxPercentage, businessType } = useApp();
+  const { selectedBranch, isOnline, taxPercentage, businessType, currency } = useApp();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<LocalCustomer | undefined>(undefined);
   const [couponCode, setCouponCode] = useState<string>('');
@@ -455,6 +456,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     });
+
+    AuditLogger.log('CREATE_INVOICE', 'orders', `Completed sale transaction for invoice: ${invoiceNum}. Total: ${totalAmount.toFixed(2)} ${currency}`, 'success', orderId);
 
     // Generate thermal receipt HTML
     const arDir = document.documentElement.dir === 'rtl';

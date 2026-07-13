@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
 import { Bell, Check } from 'lucide-react';
 import { db } from '../db/localDb';
 
 export const NotificationBell: React.FC = () => {
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -56,7 +58,7 @@ export const NotificationBell: React.FC = () => {
             const notif = {
               id: alertId,
               type: 'stock_low',
-              title: isRtl ? '⚠️ تنبيه: انخفاض المخزون' : '⚠️ Alert: Low Stock Level',
+              title: t('alert_low_stock_level'),
               body: isRtl 
                 ? `لقد قارب المخزون من منتج "${prodName}" على النفاد (المتبقي: ${qty} ${p.unit})`
                 : `Product "${prodName}" is running low (Remaining: ${qty} ${p.unit})`,
@@ -89,7 +91,7 @@ export const NotificationBell: React.FC = () => {
               const notif = {
                 id: alertId,
                 type: 'expiry_near',
-                title: isRtl ? '💊 تنبيه صلاحية قريب' : '💊 Expiry warning',
+                title: t('expiry_warning_1'),
                 body: isRtl 
                   ? `الباتش (${b.batch_number}) للمنتج "${prodName}" سينتهي في تاريخ ${b.expiry_date}`
                   : `Batch (${b.batch_number}) for product "${prodName}" expires on ${b.expiry_date}`,
@@ -157,16 +159,16 @@ export const NotificationBell: React.FC = () => {
 
       {/* Popover Dropdown */}
       {showDropdown && (
-        <div className={`absolute top-12 z-50 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-4 rounded-2xl shadow-2xl w-80 space-y-3 ${isRtl ? 'left-0' : 'right-0'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className={`absolute top-12 z-50 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-4 rounded-2xl shadow-2xl w-80 space-y-3 ${t('right_0')}`} dir={t('ltr')}>
           <div className="flex justify-between items-center border-b pb-2">
-            <h4 className="font-extrabold text-xs text-slate-700 dark:text-slate-200">{isRtl ? 'مركز الإشعارات' : 'Notifications'}</h4>
+            <h4 className="font-extrabold text-xs text-slate-700 dark:text-slate-200">{t('notifications')}</h4>
             {unreadCount > 0 && (
               <button 
                 onClick={markAllAsRead}
                 className="text-[10px] text-indigo-500 hover:underline font-bold flex items-center gap-0.5"
               >
                 <Check className="h-3 w-3" />
-                {isRtl ? 'تحديد الكل كمقروء' : 'Mark all read'}
+                {t('mark_all_read')}
               </button>
             )}
           </div>
@@ -175,7 +177,7 @@ export const NotificationBell: React.FC = () => {
             {notifications.length === 0 ? (
               <div className="text-center py-8 text-slate-400 text-xs font-semibold">
                 <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p>{isRtl ? 'علبة الإشعارات فارغة.' : 'All caught up! No notifications.'}</p>
+                <p>{t('all_caught_up_no_notifications')}</p>
               </div>
             ) : (
               notifications.map(n => (

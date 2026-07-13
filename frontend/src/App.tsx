@@ -4,6 +4,7 @@ import { useApp } from './context/AppContext';
 import { useCart } from './context/CartContext';
 import { telemetry } from './utils/telemetry';
 import { SetupWizard } from './pages/SetupWizard';
+import { CompanyManager } from './components/settings/CompanyManager';
 // React.lazy dynamic code-splitting imports for all heavy ERP & POS pages
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const POS = React.lazy(() => import('./pages/POS').then(m => ({ default: m.POS })));
@@ -13,7 +14,6 @@ const Kitchen = React.lazy(() => import('./pages/Kitchen').then(m => ({ default:
 const Reports = React.lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
 const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 const AIAssistant = React.lazy(() => import('./pages/AIAssistant').then(m => ({ default: m.AIAssistant })));
-const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const DataImport = React.lazy(() => import('./pages/DataImport').then(m => ({ default: m.DataImport })));
 import { BusinessSelector } from './components/shared/BusinessSelector';
 import { HardwareService } from './services/hardware';
@@ -42,8 +42,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-// Detect if running inside Electron (not a web browser)
-const isElectron: boolean = !!(window as any).electronAPI?.isElectron;
+
 
 export default function App() {
   const { t } = useTranslation();
@@ -58,11 +57,13 @@ export default function App() {
     triggerLocalSync,
     devices,
     businessType,
-    setBusinessType,
     currentUser,
     loginUser,
     logoutUser,
-    addUser,
+    companies,
+    activeCompanyId,
+    selectCompany,
+    createCompany,
   } = useApp();
 
   const { receiptPreview, setReceiptPreview } = useCart();
@@ -72,33 +73,18 @@ export default function App() {
   const [showHardwareSim, setShowHardwareSim] = useState(false);
   const [scanInput, setScanInput] = useState('');
 
-  // Detect first-run: show SetupWizard if no first-run marker AND no users created yet
-  const isFirstRun = !localStorage.getItem('smartpos_setup_complete');
+  // Detect first-run: show SetupWizard if no companies registered yet
+  const isFirstRun = companies.length === 0;
   const [showNewSetupWizard, setShowNewSetupWizard] = useState<boolean>(isFirstRun);
+  const [showCompanyManager, setShowCompanyManager] = useState<boolean>(false);
 
-  // Landing view state — In Electron, skip to login directly; web starts at landing
-  const [landingView, setLandingView] = useState<'landing' | 'login' | 'signup' | 'otp'>(
-    isElectron || localStorage.getItem('smartpos_setup_complete') ? 'login' : 'landing'
-  );
+
 
 
   // Login form local states
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-
-  // Signup form local states
-  const [signupName, setSignupName] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
-  const [signupError, setSignupError] = useState('');
-
-  // OTP form local states
-  const [otpCode, setOtpCode] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpSuccess, setOtpSuccess] = useState(false);
-  const [otpError, setOtpError] = useState('');
 
   // Derive RTL flag - always computed regardless of render path
   const isRtl = language === 'ar';
@@ -180,59 +166,9 @@ export default function App() {
     setScanInput('');
   };
 
-  const handleSignupSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signupName.trim() || !signupEmail.trim() || !signupPassword || !signupConfirmPassword) {
-      setSignupError(isRtl ? 'الرجاء ملء جميع الحقول!' : 'Please fill all fields!');
-      return;
-    }
-    if (signupPassword.length < 6) {
-      setSignupError(isRtl ? 'يجب أن تكون كلمة المرور 6 خانات على الأقل!' : 'Password must be at least 6 characters!');
-      return;
-    }
-    if (signupPassword !== signupConfirmPassword) {
-      setSignupError(isRtl ? 'كلمات المرور غير متطابقة!' : 'Passwords do not match!');
-      return;
-    }
-    setSignupError('');
-    setOtpLoading(true);
-    setTimeout(() => {
-      setOtpLoading(false);
-      setLandingView('otp');
-    }, 1000);
-  };
-
-  const handleOtpVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length !== 4 || isNaN(Number(otpCode))) {
-      setOtpError(isRtl ? 'يجب إدخال كود التحقق المكون من 4 أرقام!' : 'Verification code must be 4 digits!');
-      return;
-    }
-    setOtpError('');
-    setOtpLoading(true);
-    setTimeout(() => {
-      setOtpLoading(false);
-      setOtpSuccess(true);
-      // Register user in AppContext
-      addUser({
-        username: signupEmail,
-        displayName: signupName,
-        role: 'owner',
-        password: signupPassword,
-        active: true
-      });
-      setTimeout(() => {
-        setOtpSuccess(false);
-        setLoginUsername(signupEmail);
-        setLoginPassword(signupPassword);
-        setLandingView('login');
-      }, 1500);
-    }, 1200);
-  };
-
   if (showSplash) {
     return (
-      <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#090d16] text-white font-sans transition-opacity duration-500 ${splashFade ? 'opacity-0' : 'opacity-100'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#090d16] text-white font-sans transition-opacity duration-500 ${splashFade ? 'opacity-0' : 'opacity-100'}`} dir={t('ltr')}>
         {/* Elegant Glowing Spheres */}
         <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
@@ -244,10 +180,10 @@ export default function App() {
 
           <div className="space-y-2">
             <h1 className="text-3xl font-black bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 bg-clip-text text-transparent tracking-wide">
-              {isRtl ? 'سمارت POS' : 'smart POS'}
+              {t('smart_pos')}
             </h1>
             <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase">
-              {isRtl ? 'نظام إدارة المبيعات والمخازن الذكي' : 'Native Enterprise POS & ERP'}
+              {t('native_enterprise_pos_erp')}
             </p>
           </div>
 
@@ -257,7 +193,7 @@ export default function App() {
           </div>
 
           <div className="flex justify-between items-center text-[9px] text-slate-500 font-mono px-1">
-            <span>{isRtl ? 'جاري تهيئة قاعدة البيانات والواجهات...' : 'Initializing DB & modules...'}</span>
+            <span>{t('initializing_db_modules')}</span>
             <span>v1.0.1</span>
           </div>
         </div>
@@ -269,64 +205,53 @@ export default function App() {
   if (showNewSetupWizard) {
     return (
       <SetupWizard
-        onComplete={(wizardData) => {
-          if (wizardData.storeName) localStorage.setItem('pos_store_name', wizardData.storeName);
-          if (wizardData.currency) localStorage.setItem('pos_store_currency', wizardData.currency);
-          if (wizardData.phone) localStorage.setItem('pos_store_phone', wizardData.phone);
-          if (wizardData.address) localStorage.setItem('pos_store_address', wizardData.address);
-          if (wizardData.logoBase64) localStorage.setItem('pos_store_logo', wizardData.logoBase64);
-          if (wizardData.taxRate !== undefined) localStorage.setItem('pos_store_tax', wizardData.taxRate.toString());
-          if (wizardData.invoicePrefix) localStorage.setItem('pos_invoice_prefix', wizardData.invoicePrefix);
-          if (wizardData.paperSize) localStorage.setItem('pos_invoice_paper', wizardData.paperSize);
-          if (wizardData.companyName) localStorage.setItem('pos_company_name', wizardData.companyName);
-          addUser({
-            username: wizardData.ownerEmail,
-            displayName: wizardData.ownerName,
-            role: 'owner',
-            password: wizardData.ownerPassword,
-            active: true,
-          });
-          localStorage.setItem('smartpos_setup_complete', 'true');
-          localStorage.setItem('smartpos_first_run_done', 'true');
+        onComplete={async (wizardData) => {
+          await createCompany(
+            wizardData.companyName,
+            wizardData.storeName,
+            wizardData.activity,
+            wizardData.ownerName,
+            wizardData.ownerEmail,
+            wizardData.ownerPassword,
+            {
+              phone: wizardData.phone,
+              address: wizardData.address,
+              logoBase64: wizardData.logoBase64,
+              taxRate: wizardData.taxRate,
+              invoicePrefix: wizardData.invoicePrefix,
+              paperSize: wizardData.paperSize
+            }
+          );
           setShowNewSetupWizard(false);
-          setLandingView('login');
         }}
       />
     );
   }
 
   if (currentUser === null) {
-    // In Electron: skip Landing Page entirely — go straight to login
-    if (landingView === 'landing' && !isElectron) {
+    if (showCompanyManager) {
       return (
-        <LandingPage 
-          language={language} 
-          changeLanguage={changeLanguage} 
-          onNavigate={(view) => {
-            if (view === 'demo') {
-              loginUser('owner', 'owner123');
-              setBusinessType(null);
-              setLandingView('landing');
-            } else {
-              setLandingView(view);
-            }
-          }} 
-        />
+        <div className={`min-h-screen flex items-center justify-center p-6 ${theme === 'dark' ? 'dark bg-[#090d16]' : 'bg-slate-50'}`}>
+          <CompanyManager 
+            onClose={() => setShowCompanyManager(false)}
+            onOpenCompany={(compId) => {
+              selectCompany(compId);
+              setShowCompanyManager(false);
+            }}
+          />
+        </div>
       );
     }
+
+    const activeCompany = companies.find(c => c.id === activeCompanyId);
 
     return (
       <div className={`min-h-screen flex items-center justify-center p-6 ${theme === 'dark' ? 'dark bg-[#090d16]' : 'bg-slate-50'}`}>
         <div className="glass-card p-8 rounded-2xl max-w-sm w-full space-y-5 border border-slate-200/50 dark:border-slate-800/50 text-right">
           
           {/* Card Top Actions */}
-          <div className="flex justify-between items-center border-b border-slate-250/20 dark:border-slate-800/40 pb-3" dir={isRtl ? 'rtl' : 'ltr'}>
-            <button 
-              onClick={() => setLandingView('landing')} 
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] font-bold flex items-center gap-1 transition-all"
-            >
-              {isRtl ? '← الرئيسية' : '← Home'}
-            </button>
+          <div className="flex justify-between items-center border-b border-slate-200/20 dark:border-slate-850/45 pb-3" dir={t('ltr')}>
+            <span className="text-[10px] font-bold text-slate-400">smart POS</span>
             <select 
               value={language} 
               onChange={(e) => changeLanguage(e.target.value)}
@@ -334,63 +259,130 @@ export default function App() {
             >
               <option value="ar" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">العربية</option>
               <option value="en" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">English</option>
-              <option value="fr" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">Français</option>
-              <option value="de" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">Deutsch</option>
-              <option value="zh" className="bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200">中文</option>
             </select>
           </div>
 
-          {landingView === 'login' && (
-            <>
+          {/* 1. If multiple companies exist and no active company is selected, show company selection grid */}
+          {!activeCompanyId && companies.length > 0 ? (
+            <div className="space-y-4">
               <div className="text-center space-y-2">
-                <img src="./logo.png" alt="smart POS" className="h-28 mx-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
-                  {isRtl ? 'تسجيل الدخول للنظام' : 'System Login'}
+                <img src="./logo.png" alt="smart POS" className="h-20 mx-auto object-contain mb-2 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+                <h2 className="text-md font-bold text-slate-250">
+                  {t('select_company_to_start')}
                 </h2>
-                <p className="text-xs text-slate-400">
-                  {isRtl ? 'الرجاء إدخال بيانات المستخدم المعتمدة للبيع' : 'Enter authorized credentials to proceed'}
+                <p className="text-[10px] text-slate-500">
+                  {t('multiple_companies_registered_on_this_device')}
+                </p>
+              </div>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {companies.map(comp => (
+                  <button
+                    key={comp.id}
+                    onClick={() => selectCompany(comp.id)}
+                    className="w-full p-3 rounded-xl border border-slate-800/80 bg-slate-950/20 hover:border-blue-500/40 hover:bg-slate-950/60 transition-all text-right flex items-center gap-3"
+                  >
+                    {comp.logoBase64 ? (
+                      <img src={comp.logoBase64} alt="" className="w-8 h-8 rounded object-contain bg-white/5 p-0.5 border border-slate-800" />
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xs">
+                        {comp.name.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-slate-200">{comp.name}</p>
+                      <p className="text-[9px] text-slate-500 capitalize">{comp.activity}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="border-t border-slate-800/60 pt-3 space-y-2">
+                <button
+                  onClick={() => setShowNewSetupWizard(true)}
+                  className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md"
+                >
+                  + {t('create_new_company')}
+                </button>
+                <button
+                  onClick={() => setShowCompanyManager(true)}
+                  className="w-full py-2 rounded-xl border border-slate-805 hover:bg-slate-850/40 text-slate-400 text-xs font-bold transition-all"
+                >
+                  {t('company_manager')}
+                </button>
+              </div>
+            </div>
+          ) : !activeCompanyId ? (
+            /* No company registered at all (fallback for first run) */
+            <div className="text-center space-y-5 py-6">
+              <img src="./logo.png" alt="smart POS" className="h-24 mx-auto object-contain filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+              <div className="space-y-1">
+                <h2 className="text-lg font-black text-slate-100">{t('welcome_to_smart_pos')}</h2>
+                <p className="text-xs text-slate-400">{t('please_start_by_creating_your_first_company')}</p>
+              </div>
+              <button
+                onClick={() => setShowNewSetupWizard(true)}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition-all"
+              >
+                + {t('create_new_company')}
+              </button>
+            </div>
+          ) : (
+            /* Active company selected - show standard login page with no Register link */
+            <>
+              <div className="text-center space-y-1">
+                {activeCompany?.logoBase64 ? (
+                  <img src={activeCompany.logoBase64} alt="" className="h-20 mx-auto object-contain mb-2 bg-white/5 p-1 rounded-lg border border-slate-800" />
+                ) : (
+                  <img src="./logo.png" alt="smart POS" className="h-20 mx-auto object-contain mb-2 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+                )}
+                <h2 className="text-sm font-bold text-slate-200">
+                  {isRtl ? `تسجيل الدخول - ${activeCompany?.name}` : `Login - ${activeCompany?.name}`}
+                </h2>
+                <p className="text-[10px] text-slate-500 capitalize">
+                  {isRtl ? `نشاط: ${activeCompany?.activity}` : `Activity: ${activeCompany?.activity}`}
                 </p>
               </div>
 
               {loginError && (
-                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold flex items-center justify-center gap-1.5">
+                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold flex items-center justify-center gap-1.5 animate-pulse">
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                   {loginError}
                 </div>
               )}
 
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
-                  const success = loginUser(loginUsername, loginPassword);
+                  const success = await loginUser(loginUsername, loginPassword);
                   if (success) {
                     setLoginUsername('');
                     setLoginPassword('');
                     setLoginError('');
                   } else {
-                    setLoginError(isRtl ? 'اسم المستخدم أو كلمة المرور خاطئة!' : 'Incorrect username or password!');
+                    setLoginError(t('incorrect_username_or_password'));
                   }
                 }}
                 className="space-y-4 text-xs font-semibold"
               >
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-slate-400 block mb-1">{isRtl ? 'اسم المستخدم (البريد)' : 'Username (Email)'}</label>
+                <div className={t('text_left')}>
+                  <label className="text-slate-400 block mb-1">{t('username_email')}</label>
                   <input
                     type="text"
-                    placeholder={isRtl ? "مثال: owner, cashier" : "e.g. owner, cashier"}
+                    placeholder={t('ownerexamplecom')}
                     value={loginUsername}
                     onChange={e => setLoginUsername(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200 font-sans"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-850 bg-slate-950 focus:outline-none text-slate-200 font-sans"
                   />
                 </div>
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-slate-400 block mb-1">{isRtl ? 'كلمة المرور' : 'Password'}</label>
+                <div className={t('text_left')}>
+                  <label className="text-slate-400 block mb-1">{t('password')}</label>
                   <input
                     type="password"
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={e => setLoginPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-850 bg-slate-950 focus:outline-none text-slate-200"
                   />
                 </div>
 
@@ -398,192 +390,46 @@ export default function App() {
                   type="submit"
                   className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md text-xs mt-2"
                 >
-                  {isRtl ? 'تسجيل الدخول' : 'Login'}
+                  {t('login')}
                 </button>
               </form>
 
-              <div className="text-center pt-1 border-t border-slate-200/20 pt-3">
-                <button 
-                  onClick={() => setLandingView('signup')} 
-                  className="text-xs text-blue-500 hover:underline font-bold"
-                >
-                  {isRtl ? 'تسجيل حساب تجاري جديد' : 'Register New Merchant Account'}
-                </button>
-              </div>
-
-              {/* First-run: show Setup Wizard link */}
-              {!localStorage.getItem('pos_users') && (
-                <div className="border-t pt-3 text-center">
+              <div className="border-t border-slate-800/60 pt-3 space-y-2">
+                {companies.length > 1 && (
                   <button
-                    onClick={() => setShowNewSetupWizard(true)}
-                    className="text-xs text-emerald-500 hover:underline font-bold flex items-center gap-1.5 mx-auto"
+                    onClick={() => selectCompany('')}
+                    className="w-full py-2 rounded-xl bg-slate-950/40 hover:bg-slate-800/40 text-slate-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                   >
-                    ✨ {isRtl ? 'إعداد أول حساب للمالك' : 'First-Time Setup Wizard'}
+                    {t('switch_company')}
                   </button>
-                </div>
-              )}
-            </>
-          )}
-
-          {landingView === 'signup' && (
-            <>
-              <div className="text-center space-y-2">
-                <img src="./logo.png" alt="smart POS" className="h-20 mx-auto object-contain mb-2 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
-                  {isRtl ? 'تسجيل حساب تجاري جديد' : 'Register Business Account'}
-                </h2>
-                <p className="text-xs text-slate-400">
-                  {isRtl ? 'ابدأ بإعداد نظام الكاشير لشركتك الآن' : 'Start configuring your retail POS system'}
-                </p>
-              </div>
-
-              {signupError && (
-                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
-                  ⚠️ {signupError}
-                </div>
-              )}
-
-              <form onSubmit={handleSignupSubmit} className="space-y-3.5 text-xs font-semibold">
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-slate-400 block mb-1">{isRtl ? 'الاسم الكامل' : 'Full Name'}</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={isRtl ? "مثال: أحمد محمد" : "e.g. John Doe"}
-                    value={signupName}
-                    onChange={e => setSignupName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
-                  />
-                </div>
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-slate-400 block mb-1">{isRtl ? 'البريد الإلكتروني' : 'Email Address'}</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@company.com"
-                    value={signupEmail}
-                    onChange={e => setSignupEmail(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200 font-sans"
-                  />
-                </div>
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-slate-400 block mb-1">{isRtl ? 'كلمة المرور' : 'Password'}</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={signupPassword}
-                    onChange={e => setSignupPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
-                  />
-                </div>
-                <div className={isRtl ? 'text-right' : 'text-left'}>
-                  <label className="text-slate-400 block mb-1">{isRtl ? 'تأكيد كلمة المرور' : 'Confirm Password'}</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={signupConfirmPassword}
-                    onChange={e => setSignupConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 focus:outline-none text-slate-800 dark:text-slate-200"
-                  />
-                </div>
-
+                )}
                 <button
-                  type="submit"
-                  disabled={otpLoading}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-md text-xs mt-2 disabled:opacity-50"
+                  onClick={() => setShowNewSetupWizard(true)}
+                  className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md"
                 >
-                  {otpLoading ? (isRtl ? 'جاري التحضير...' : 'Preparing...') : (isRtl ? 'تسجيل وإرسال كود التفعيل' : 'Sign Up & Send Code')}
+                  + {t('create_new_company')}
                 </button>
-              </form>
-
-              <div className="text-center pt-2 border-t border-slate-200/20">
-                <span className="text-slate-400 text-xs">{isRtl ? 'لديك حساب بالفعل؟ ' : 'Already have an account? '}</span>
-                <button 
-                  onClick={() => setLandingView('login')} 
-                  className="text-xs text-blue-500 hover:underline font-bold"
+                <button
+                  onClick={() => setShowCompanyManager(true)}
+                  className="w-full py-2 rounded-xl border border-slate-800 hover:bg-slate-850/40 text-slate-400 text-xs font-bold transition-all"
                 >
-                  {isRtl ? 'تسجيل الدخول' : 'Login'}
+                  {t('company_manager')}
                 </button>
               </div>
             </>
           )}
 
-          {landingView === 'otp' && (
-            <>
-              <div className="text-center space-y-2">
-                <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-500 text-2xl animate-bounce">
-                  ✉️
-                </div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent font-sans">
-                  {isRtl ? 'تأكيد الحساب والبريد' : 'Verify Email Address'}
-                </h2>
-                <p className="text-xs text-slate-400 leading-relaxed font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
-                  {isRtl 
-                    ? `أدخل كود التحقق المكون من 4 أرقام المرسل إلى البريد ${signupEmail}` 
-                    : `Enter the 4-digit code sent to ${signupEmail}`}
-                </p>
-              </div>
-
-              {otpError && (
-                <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-center text-xs text-red-500 font-bold">
-                  ⚠️ {otpError}
-                </div>
-              )}
-
-              {otpSuccess ? (
-                <div className="p-6 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-500 text-xl font-bold">
-                    ✓
-                  </div>
-                  <h4 className="font-extrabold text-sm text-emerald-500">{isRtl ? 'تم تأكيد الحساب بنجاح!' : 'Account Confirmed!'}</h4>
-                  <p className="text-[10px] text-slate-400">{isRtl ? 'جاري توجيهك لصفحة الدخول...' : 'Redirecting to login...'}</p>
-                </div>
-              ) : (
-                <form onSubmit={handleOtpVerify} className="space-y-4 text-xs font-semibold">
-                  <div className="space-y-1">
-                    <input
-                      type="text"
-                      maxLength={4}
-                      required
-                      placeholder="1234"
-                      value={otpCode}
-                      onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                      className="w-40 mx-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-center focus:outline-none text-lg text-slate-800 dark:text-slate-200 font-mono tracking-widest block"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={otpLoading}
-                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md text-xs disabled:opacity-50"
-                  >
-                    {otpLoading ? (isRtl ? 'جاري التأكيد...' : 'Verifying...') : (isRtl ? 'تأكيد الرمز وتفعيل الحساب' : 'Verify & Activate')}
-                  </button>
-                </form>
-              )}
-
-              {!otpSuccess && (
-                <div className="text-center pt-2 border-t border-slate-200/20">
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      alert(isRtl ? 'تم إعادة إرسال الرمز (1234) للاختبار.' : 'Code (1234) resent for testing.');
-                    }}
-                    className="text-[10px] text-slate-400 hover:underline"
-                  >
-                    {isRtl ? 'إعادة إرسال الرمز' : 'Resend Verification Code'}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+          {/* Smart POS ERP Version Info Badge at Bottom */}
+          <div className="pt-2 border-t border-slate-800/50 text-center text-[9px] text-slate-600 font-mono tracking-wider">
+            Smart POS ERP • Version 1.0.0 • Build 2026.07
+          </div>
 
         </div>
       </div>
     );
   }
+
+
 
   if (businessType === null) {
     return <BusinessSelector />;
@@ -600,7 +446,7 @@ export default function App() {
     ...((currentUser?.role !== 'cashier') ? [
       { id: 'reports' as const, label: t('reports'), icon: BarChart3 },
       { id: 'ai_assistant' as const, label: t('ai_assistant'), icon: Sparkles, color: 'text-cyan-500' },
-      { id: 'data_import' as const, label: isRtl ? '📥 استيراد البيانات' : 'Import Data', icon: Upload },
+      { id: 'data_import' as const, label: t('import_data'), icon: Upload },
       { id: 'settings' as const, label: t('settings'), icon: SettingsIcon }
     ] : [])
   ];
@@ -612,7 +458,7 @@ export default function App() {
       <aside
         className={`glass-card border-slate-200/50 dark:border-slate-800/50 transition-all duration-300 flex flex-col justify-between ${
           sidebarCollapsed ? 'w-16' : 'w-60'
-        } ${isRtl ? 'border-l' : 'border-r'}`}
+        } ${t('border_r')}`}
       >
         <div className="flex flex-col space-y-6 pt-5">
           {/* Logo Brand */}
@@ -620,7 +466,7 @@ export default function App() {
             {!sidebarCollapsed && (
               <span className="font-extrabold text-base tracking-wide bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 bg-clip-text text-transparent flex items-center gap-2 font-sans">
                 <img src="./logo.png" alt="smart POS" className="h-10 w-10 object-contain" />
-                <span>{isRtl ? 'سمارت POS' : 'smart POS'}</span>
+                <span>{t('smart_pos')}</span>
               </span>
             )}
             <button
@@ -667,7 +513,7 @@ export default function App() {
               type="button"
               onClick={logoutUser}
               className={`p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all ${sidebarCollapsed ? 'w-full flex justify-center' : ''}`}
-              title={isRtl ? 'تسجيل الخروج' : 'Logout'}
+              title={t('logout')}
             >
               ➔
             </button>
@@ -679,7 +525,7 @@ export default function App() {
           {!sidebarCollapsed ? (
             <div className="p-3 rounded-xl bg-slate-150/50 dark:bg-slate-900/30 border border-slate-200/40 dark:border-slate-800/40 space-y-2 text-[10px]">
               <div className="flex justify-between items-center">
-                <span className="font-semibold text-slate-500">{isRtl ? 'الاتصال والفرع' : 'Branch Node'}</span>
+                <span className="font-semibold text-slate-500">{t('branch_node')}</span>
                 <span className={`px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5 ${isOnline ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                   {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
@@ -691,7 +537,7 @@ export default function App() {
                 disabled={isSyncing || !isOnline}
                 className="w-full py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all disabled:opacity-50 text-[9px]"
               >
-                {isSyncing ? (isRtl ? 'مزامنة...' : 'Syncing...') : (isRtl ? 'مزامنة السحابة' : 'Sync Cloud')}
+                {isSyncing ? (t('syncing')) : (t('sync_cloud'))}
               </button>
             </div>
           ) : (
@@ -706,17 +552,17 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="glass-card h-16 border-b border-slate-200/50 dark:border-slate-800/50 px-6 flex justify-between items-center select-none">
           <div className="flex items-center gap-2.5 text-xs font-bold text-slate-400">
-            <span>{isRtl ? 'فرع الكاشير:' : 'Terminal Node:'}</span>
+            <span>{t('terminal_node')}</span>
             <span className="text-slate-800 dark:text-slate-100 bg-slate-150 dark:bg-slate-850 px-2.5 py-1.5 rounded-lg">
               {isRtl ? selectedBranch.name_ar : selectedBranch.name_en}
             </span>
             <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1 text-[10px] uppercase font-black font-sans">
               <Store className="h-3.5 w-3.5" />
-              {businessType === 'restaurant' ? (isRtl ? 'مطعم ومقهى' : 'Restaurant & Café') :
-               businessType === 'supermarket' ? (isRtl ? 'سوبر ماركت' : 'Supermarket') :
-               businessType === 'pharmacy' ? (isRtl ? 'صيدلية وعيادة' : 'Pharmacy') :
-               businessType === 'clothing' ? (isRtl ? 'ملابس وأحذية' : 'Clothing Store') :
-               (isRtl ? 'إلكترونيات وأجهزة' : 'Electronics Store')}
+              {businessType === 'restaurant' ? (t('restaurant_caf')) :
+               businessType === 'supermarket' ? (t('supermarket')) :
+               businessType === 'pharmacy' ? (t('pharmacy')) :
+               businessType === 'clothing' ? (t('clothing_store')) :
+               (t('electronics_store'))}
             </span>
           </div>
 
@@ -729,7 +575,7 @@ export default function App() {
                 onClick={() => setShowHardwareSim(!showHardwareSim)}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-all shadow-xs"
               >
-                🖥️ {isRtl ? 'محاكي الأجهزة' : 'Devices Emulator'}
+                🖥️ {t('devices_emulator')}
               </button>
             )}
 
@@ -775,10 +621,10 @@ export default function App() {
 
       {/* Floating Hardware Simulator panel */}
       {import.meta.env.DEV && showHardwareSim && (
-        <div className={`fixed bottom-4 z-40 bg-slate-900 text-white p-5 rounded-2xl shadow-2xl w-80 space-y-4 border border-slate-700 font-sans transition-all animate-fade-in ${isRtl ? 'left-4' : 'right-4'}`}>
+        <div className={`fixed bottom-4 z-40 bg-slate-900 text-white p-5 rounded-2xl shadow-2xl w-80 space-y-4 border border-slate-700 font-sans transition-all animate-fade-in ${t('right_4')}`}>
           <div className="flex justify-between items-center border-b border-slate-700 pb-2">
             <h4 className="font-extrabold text-sm flex items-center gap-1.5">
-              📟 {isRtl ? 'لوحة محاكاة الأجهزة الملحقة' : 'Peripheral Device Panel'}
+              📟 {t('peripheral_device_panel')}
             </h4>
             <button
               onClick={() => setShowHardwareSim(false)}
@@ -868,7 +714,7 @@ export default function App() {
                     const plainText = temp.innerText || temp.textContent || '';
                     try {
                       await HardwareService.printRawESCPOSText(plainText);
-                      alert(isRtl ? 'تم إرسال الفاتورة الحرارية بنجاح إلى الطابعة المادية متصلة 🖨️' : 'Successfully sent receipt to physical printer 🖨️');
+                      alert(t('successfully_sent_receipt_to_physical_printer'));
                     } catch (e: any) {
                       alert(isRtl ? 'فشلت الطباعة المادية: ' + e.message : 'Physical print failed: ' + e.message);
                     }
@@ -882,7 +728,7 @@ export default function App() {
                 }}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm flex-1"
               >
-                🖨️ {isRtl ? 'طباعة فعلية' : 'Print Receipt'}
+                🖨️ {t('print_receipt')}
               </button>
               <button
                 onClick={() => setReceiptPreview(null)}

@@ -53,12 +53,17 @@ export type AuditAction = typeof AUDIT_ACTIONS[keyof typeof AUDIT_ACTIONS];
 
 // Short device descriptor
 function getDeviceInfo(): string {
+  const isElectron = !!(window as any).electronAPI?.isElectron;
+  const platform = navigator.platform;
   const ua = navigator.userAgent;
-  if (ua.includes('Chrome')) return 'Chrome';
-  if (ua.includes('Firefox')) return 'Firefox';
-  if (ua.includes('Safari')) return 'Safari';
-  if (ua.includes('Edge')) return 'Edge';
-  return 'Browser';
+  let browser = 'Browser';
+  if (ua.includes('Chrome')) browser = 'Chrome';
+  else if (ua.includes('Firefox')) browser = 'Firefox';
+  else if (ua.includes('Safari')) browser = 'Safari';
+  else if (ua.includes('Edge')) browser = 'Edge';
+
+  const ip = sessionStorage.getItem('client_ip_address') || 'Local';
+  return isElectron ? `Electron (${platform})` : `${browser} (IP: ${ip})`;
 }
 
 // Get or create session ID

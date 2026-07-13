@@ -191,16 +191,17 @@ export class CashierDexieDb extends Dexie {
   orderItems!: Table<LocalOrderItem>;
   suspendedOrders!: Table<LocalSuspendedOrder>;
   offlineQueue!: Table<OfflineQueueItem>;
-  suppliers!: Table<LocalSupplier>;         // FIXED: was Table<any>
-  purchaseOrders!: Table<LocalPurchaseOrder>; // FIXED: was Table<any>
-  expenses!: Table<LocalExpense>;            // FIXED: was Table<any>
+  suppliers!: Table<LocalSupplier>;
+  purchaseOrders!: Table<LocalPurchaseOrder>;
+  expenses!: Table<LocalExpense>;
   refunds!: Table<LocalRefund>;
   appSettings!: Table<AppSetting>;
   auditLog!: Table<LocalAuditLog>;
   notifications!: Table<LocalNotification>;
+  users!: Table<any>; // Isolated users table for each company
 
-  constructor() {
-    super('CashierSystemDb');
+  constructor(dbName = 'CashierSystemDb') {
+    super(dbName);
 
     // Version 1 — Original schema
     this.version(1).stores({
@@ -231,10 +232,8 @@ export class CashierDexieDb extends Dexie {
       refunds: 'id, original_order_id, refund_order_id, created_at',
     });
 
-    // PERFORMANCE FIX [HIGH]: Version 4 — Added composite indexes and typed tables
-    // NOTE: v3 was identical to v2 (removed to save migration overhead)
+    // Version 4 — Composite indexes
     this.version(4).stores({
-      // Composite index [branch_id+created_at] for efficient date-range queries per branch
       products: 'id, name_en, name_ar, sku, barcode, category, is_pharmaceutical',
       batches: 'id, product_id, warehouse_id, batch_number, expiry_date',
       customers: 'id, name, phone, email, tier',
@@ -246,7 +245,7 @@ export class CashierDexieDb extends Dexie {
       purchaseOrders: 'id, supplier_id, status, created_at',
       expenses: 'id, [branch_id+date], branch_id, category',
       refunds: 'id, original_order_id, refund_order_id, created_at',
-      appSettings: 'key',  // NEW: persistent app settings table
+      appSettings: 'key',
     });
 
     // Version 5 — Added auditLog and notifications tables for Commercial Release
@@ -266,10 +265,50 @@ export class CashierDexieDb extends Dexie {
       auditLog: '++id, timestamp, user, action, entity, branch',
       notifications: 'id, type, isRead, createdAt'
     });
+
+    // Version 6 — Added isolated users table
+    this.version(6).stores({
+      products: 'id, name_en, name_ar, sku, barcode, category, is_pharmaceutical',
+      batches: 'id, product_id, warehouse_id, batch_number, expiry_date',
+      customers: 'id, name, phone, email, tier',
+      orders: 'id, invoice_number, [branch_id+created_at], branch_id, customer_id, payment_status, is_synced, created_at, refund_of_order_id, status',
+      orderItems: 'id, order_id, product_id, batch_id',
+      suspendedOrders: 'id, invoice_number, date, branch_id',
+      offlineQueue: '++id, action, table, timestamp, retryCount',
+      suppliers: 'id, name, phone',
+      purchaseOrders: 'id, supplier_id, status, created_at',
+      expenses: 'id, [branch_id+date], branch_id, category',
+      refunds: 'id, original_order_id, refund_order_id, created_at',
+      appSettings: 'key',
+      auditLog: '++id, timestamp, user, action, entity, branch',
+      notifications: 'id, type, isRead, createdAt',
+      users: 'id, username, role, active'
+    });
   }
 }
 
-export const db = new CashierDexieDb();
+// Global active database instance tracker
+let currentDb = new CashierDexieDb('CashierSystemDb');
+
+export const db = new Proxy({}, {
+  get(_, prop) {
+    const activeCompanyId = localStorage.getItem('active_company_id');
+    const expectedDbName = activeCompanyId ? `CashierSystemDb_${activeCompanyId}` : 'CashierSystemDb';
+    if (currentDb.name !== expectedDbName) {
+      currentDb.close();
+      currentDb = new CashierDexieDb(expectedDbName);
+    }
+    const value = Reflect.get(currentDb, prop);
+    if (typeof value === 'function') {
+      return value.bind(currentDb);
+    }
+    return value;
+  }
+}) as CashierDexieDb;
+
+export function getCompanyDbInstance(companyId: string): CashierDexieDb {
+  return new CashierDexieDb(`CashierSystemDb_${companyId}`);
+}
 
 // ── Atomic Invoice Counter ────────────────────────────────────────────────────
 /**
@@ -351,11 +390,11 @@ export async function seedLocalDbOptional() {
   nextYear.setFullYear(nextYear.getFullYear() + 2);
 
   await db.batches.bulkAdd([
-    { id: 'b_7_near', product_id: 'p_7', warehouse_id: 'wh_riyadh_1', batch_number: 'PAN-B992', expiry_date: tomorrow.toISOString().split('T')[0], quantity: 4 },
-    { id: 'b_7_safe', product_id: 'p_7', warehouse_id: 'wh_riyadh_1', batch_number: 'PAN-C115', expiry_date: nextYear.toISOString().split('T')[0], quantity: 50 },
-    { id: 'b_8_safe', product_id: 'p_8', warehouse_id: 'wh_riyadh_1', batch_number: 'AMO-XP20', expiry_date: nextYear.toISOString().split('T')[0], quantity: 35 },
-    { id: 'b_9_near', product_id: 'p_9', warehouse_id: 'wh_riyadh_2', batch_number: 'VOL-E082', expiry_date: tomorrow.toISOString().split('T')[0], quantity: 2 },
-    { id: 'b_9_safe', product_id: 'p_9', warehouse_id: 'wh_riyadh_1', batch_number: 'VOL-E095', expiry_date: nextYear.toISOString().split('T')[0], quantity: 18 }
+    { id: 'b_7_near', product_id: 'p_7', warehouse_id: 'wh_main_1', batch_number: 'PAN-B992', expiry_date: tomorrow.toISOString().split('T')[0], quantity: 4 },
+    { id: 'b_7_safe', product_id: 'p_7', warehouse_id: 'wh_main_1', batch_number: 'PAN-C115', expiry_date: nextYear.toISOString().split('T')[0], quantity: 50 },
+    { id: 'b_8_safe', product_id: 'p_8', warehouse_id: 'wh_main_1', batch_number: 'AMO-XP20', expiry_date: nextYear.toISOString().split('T')[0], quantity: 35 },
+    { id: 'b_9_near', product_id: 'p_9', warehouse_id: 'wh_main_2', batch_number: 'VOL-E082', expiry_date: tomorrow.toISOString().split('T')[0], quantity: 2 },
+    { id: 'b_9_safe', product_id: 'p_9', warehouse_id: 'wh_main_1', batch_number: 'VOL-E095', expiry_date: nextYear.toISOString().split('T')[0], quantity: 18 }
   ]);
 
   // Seed Kitchen Raw Materials
@@ -370,7 +409,7 @@ export async function seedLocalDbOptional() {
     await db.batches.add({
       id: 'b_' + m.id,
       product_id: m.id,
-      warehouse_id: 'wh_riyadh_1',
+      warehouse_id: 'wh_main_1',
       batch_number: 'BATCH-RAW-01',
       expiry_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       quantity: 100
@@ -382,6 +421,34 @@ export async function seedLocalDbOptional() {
     { id: 's_1', name: 'شركة الأغذية المتحدة', contact_name: 'سليمان خالد', phone: '0114992929', email: 'supplier@food.com', balance: -1500 },
     { id: 's_2', name: 'مزارع الجوف الزراعية', contact_name: 'فهد العاصم', phone: '0142999121', email: 'aljouf@farm.com', balance: 0 },
     { id: 's_3', name: 'الوطنية للدواجن', contact_name: 'صالح الأحمد', phone: '0163884848', email: 'poultry@watania.com', balance: -2400 },
-    { id: 's_4', name: 'مخابز الرياض الحديثة', contact_name: 'وليد العثمان', phone: '0114773829', email: 'riyadh_bakeries@mail.com', balance: 0 }
+    { id: 's_4', name: 'المخابز الوطنية الحديثة', contact_name: 'وليد العثمان', phone: '0114773829', email: 'modern_bakeries@mail.com', balance: 0 }
   ]);
+}
+
+export async function getCompanyDbSize(companyId: string): Promise<string> {
+  try {
+    const tempDb = getCompanyDbInstance(companyId);
+    await tempDb.open();
+    let totalRows = 0;
+    const tableNames = [
+      'products', 'batches', 'customers', 'orders', 
+      'orderItems', 'suspendedOrders', 'suppliers', 
+      'purchaseOrders', 'expenses', 'refunds', 'appSettings', 'users'
+    ];
+    for (const tName of tableNames) {
+      if ((tempDb as any)[tName]) {
+        totalRows += await (tempDb as any)[tName].count();
+      }
+    }
+    tempDb.close();
+    
+    // Estimate size: 512KB base metadata + 0.5KB per record
+    const sizeInKb = 512 + totalRows * 0.5;
+    if (sizeInKb < 1024) {
+      return `${sizeInKb.toFixed(1)} KB`;
+    }
+    return `${(sizeInKb / 1024).toFixed(2)} MB`;
+  } catch {
+    return '512.0 KB';
+  }
 }

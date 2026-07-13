@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Archive, ArrowLeftRight, Landmark, DollarSign, Barcode, Trash, BookOpen, Layers, ShieldAlert, Palette, Maximize2, Ship, Coins, CheckCircle } from 'lucide-react';
+import { Plus, Search, Archive, ArrowLeftRight, Landmark, DollarSign, Barcode, Trash, BookOpen, Layers, ShieldAlert, Palette, Maximize2, Ship, Coins, CheckCircle, Edit } from 'lucide-react';
 import { db } from '../db/localDb';
 import type { LocalProduct, LocalBatch } from '../db/localDb';
 import { useApp } from '../context/AppContext';
+import { AuditLogger } from '../utils/auditLogger';
 
 export const ERP: React.FC = () => {
   const { t } = useTranslation();
@@ -11,6 +12,7 @@ export const ERP: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'products' | 'inventory' | 'purchases' | 'expenses' | 'recipes' | 'approvals' | 'variants' | 'shipments'>('products');
   const [products, setProducts] = useState<LocalProduct[]>([]);
   const [batches, setBatches] = useState<LocalBatch[]>([]);
+  const [editingProdId, setEditingProdId] = useState<string | null>(null);
   
   // Client-side pagination states for native performance
   const [productsPage, setProductsPage] = useState(1);
@@ -59,8 +61,8 @@ export const ERP: React.FC = () => {
   }, [showAddProdModal, businessType]);
 
   // Stock transfer form
-  const [fromWh, setFromWh] = useState('wh_riyadh_1');
-  const [toWh, setToWh] = useState('wh_riyadh_2');
+  const [fromWh, setFromWh] = useState('wh_main_1');
+  const [toWh, setToWh] = useState('wh_main_2');
   const [transferProdId, setTransferProdId] = useState('');
   const [transferQty, setTransferQty] = useState(1);
 
@@ -187,8 +189,8 @@ export const ERP: React.FC = () => {
       if (!addBatchProdId) setAddBatchProdId(p[0].id);
       if (!addBatchWh) {
         if (businessType === 'restaurant') setAddBatchWh('wh_kitchen');
-        else if (businessType === 'pharmacy') setAddBatchWh('wh_riyadh_2');
-        else setAddBatchWh('wh_riyadh_1');
+        else if (businessType === 'pharmacy') setAddBatchWh('wh_main_2');
+        else setAddBatchWh('wh_main_1');
       }
     }
 
@@ -244,38 +246,58 @@ export const ERP: React.FC = () => {
     e.preventDefault();
     if (!prodNameEn || !prodNameAr || !prodBarcode || !prodSku) return;
 
-    const id = 'p_' + Math.random().toString(36).substr(2, 9);
     const finalPrice = isVatInclusive ? parseFloat((prodPrice / (1 + taxPercentage / 100)).toFixed(2)) : prodPrice;
 
-    const newProd: LocalProduct = {
-      id,
-      name_en: prodNameEn,
-      name_ar: prodNameAr,
-      sku: prodSku,
-      barcode: prodBarcode,
-      price: finalPrice,
-      cost: prodCost,
-      unit: prodUnit,
-      type: prodType,
-      category: prodCategory,
-      min_stock: prodMinStock,
-      is_pharmaceutical: isPhar ? 1 : 0,
-      stock: prodType === 'piece' ? 20 : 5, // initial mock stock
-      ...(prodImageBase64 && { image_base64: prodImageBase64 })
-    };
-
-    await db.products.add(newProd);
-
-    // If pharma, add a mock batch
-    if (isPhar) {
-      await db.batches.add({
-        id: 'b_' + Math.random().toString(36).substr(2, 9),
-        product_id: id,
-        warehouse_id: 'wh_riyadh_1',
-        batch_number: 'B-' + Math.floor(100 + Math.random()*900),
-        expiry_date: '2028-12-31',
-        quantity: 20
+    if (editingProdId) {
+      // Update existing product
+      await db.products.update(editingProdId, {
+        name_en: prodNameEn,
+        name_ar: prodNameAr,
+        sku: prodSku,
+        barcode: prodBarcode,
+        price: finalPrice,
+        cost: prodCost,
+        category: prodCategory,
+        min_stock: prodMinStock,
+        is_pharmaceutical: isPhar ? 1 : 0,
+        ...(prodImageBase64 && { image_base64: prodImageBase64 })
       });
+      AuditLogger.log('UPDATE_PRODUCT', 'products', `Modified product details: ${prodNameEn} (SKU: ${prodSku})`, 'success', editingProdId);
+      setEditingProdId(null);
+    } else {
+      // Create new product
+      const id = 'p_' + Math.random().toString(36).substr(2, 9);
+      const newProd: LocalProduct = {
+        id,
+        name_en: prodNameEn,
+        name_ar: prodNameAr,
+        sku: prodSku,
+        barcode: prodBarcode,
+        price: finalPrice,
+        cost: prodCost,
+        unit: prodUnit,
+        type: prodType,
+        category: prodCategory,
+        min_stock: prodMinStock,
+        is_pharmaceutical: isPhar ? 1 : 0,
+        stock: prodType === 'piece' ? 20 : 5, // initial mock stock
+        ...(prodImageBase64 && { image_base64: prodImageBase64 })
+      };
+
+      await db.products.add(newProd);
+      AuditLogger.log('CREATE_PRODUCT', 'products', `Added new product profile: ${prodNameEn} (SKU: ${prodSku})`, 'success', id);
+
+      // If pharma, add a mock batch
+      if (isPhar) {
+        await db.batches.add({
+          id: 'b_' + Math.random().toString(36).substr(2, 9),
+          product_id: id,
+          warehouse_id: 'wh_main_1',
+          batch_number: 'B-' + Math.floor(100 + Math.random()*900),
+          expiry_date: '2028-12-31',
+          quantity: 20
+        });
+      }
     }
 
     setShowAddProdModal(false);
@@ -379,7 +401,7 @@ export const ERP: React.FC = () => {
   };
 
   const handleDeleteSupplier = async (id: string) => {
-    if (confirm(isRtl ? 'هل أنت متأكد من حذف هذا المورد؟' : 'Are you sure you want to delete this supplier?')) {
+    if (confirm(t('are_you_sure_you_want_to_delete_this_supplier'))) {
       await db.suppliers.delete(id);
       // Refresh suppliers list
       const s = await db.suppliers.toArray();
@@ -425,7 +447,7 @@ export const ERP: React.FC = () => {
     
     // Refresh data
     await loadData();
-    alert(isRtl ? 'تم إضافة المخزون للدفعة بنجاح!' : 'Stock added to batch successfully!');
+    alert(t('stock_added_to_batch_successfully'));
   };
 
   const handleAddExpense = async (e: React.FormEvent) => {
@@ -434,7 +456,7 @@ export const ERP: React.FC = () => {
 
     await db.expenses.add({
       id: 'exp_' + Math.random().toString(36).substr(2, 9),
-      branch_id: 'br_riyadh_main',
+      branch_id: 'br_main',
       category: expenseCategory,
       amount: expenseAmount,
       description: expenseDesc,
@@ -447,10 +469,28 @@ export const ERP: React.FC = () => {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+    const matched = await db.products.get(id);
+    const prodName = matched ? (isRtl ? matched.name_ar : matched.name_en) : id;
+    if (confirm(t('are_you_sure_you_want_to_delete_this_product'))) {
       await db.products.delete(id);
+      AuditLogger.log('DELETE_PRODUCT', 'products', `Removed product from database: ${prodName}`, 'warning', id);
       await loadData();
     }
+  };
+
+  const handleEditProductClick = (p: LocalProduct) => {
+    setEditingProdId(p.id);
+    setProdNameEn(p.name_en);
+    setProdNameAr(p.name_ar);
+    setProdSku(p.sku);
+    setProdBarcode(p.barcode);
+    setProdPrice(p.price);
+    setProdCost(p.cost);
+    setProdCategory(p.category);
+    setProdMinStock(p.min_stock || 5);
+    setIsPhar(p.is_pharmaceutical === 1);
+    setProdImageBase64(p.image_base64 || '');
+    setShowAddProdModal(true);
   };
 
   // Custom Sector Handlers
@@ -477,7 +517,7 @@ export const ERP: React.FC = () => {
     await db.products.update(selectedRecipeProduct, {
       recipe: JSON.stringify(recipeIngredients)
     });
-    alert(isRtl ? 'تم حفظ وصفة ومكونات المنتج بنجاح!' : 'Recipe and ingredients saved successfully!');
+    alert(t('recipe_and_ingredients_saved_successfully'));
     setSelectedRecipeProduct('');
     setRecipeIngredients([]);
     loadData();
@@ -487,7 +527,7 @@ export const ERP: React.FC = () => {
     e.preventDefault();
     if (!approvalProdId || !approvalIdInput.trim()) return;
     await db.products.update(approvalProdId, { approval_id: approvalIdInput.trim() });
-    alert(isRtl ? 'تم تحديث كود تصريح هيئة الدواء بنجاح!' : 'SFDA Approval Code updated successfully!');
+    alert(t('sfda_approval_code_updated_successfully'));
     setApprovalProdId('');
     setApprovalIdInput('');
     loadData();
@@ -495,11 +535,11 @@ export const ERP: React.FC = () => {
 
   const handleGenerateMatrixPreview = () => {
     if (!matrixBaseNameEn.trim() || !matrixBaseNameAr.trim() || matrixBasePrice <= 0 || matrixBaseCost <= 0) {
-      alert(isRtl ? 'الرجاء تعبئة الحقول الأساسية لمنتج الملابس أولاً.' : 'Please fill all base clothing fields first.');
+      alert(t('please_fill_all_base_clothing_fields_first'));
       return;
     }
     if (matrixSelectedSizes.length === 0 || matrixSelectedColors.length === 0) {
-      alert(isRtl ? 'الرجاء اختيار مقاس واحد ولون واحد على الأقل.' : 'Please select at least one size and one color.');
+      alert(t('please_select_at_least_one_size_and_one_color'));
       return;
     }
 
@@ -630,7 +670,7 @@ export const ERP: React.FC = () => {
     <div className="flex flex-col space-y-4 h-full animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold font-sans">{isRtl ? 'لوحة تحكم ERP والمستودعات' : 'ERP Inventory & Admin Hub'}</h2>
+          <h2 className="text-xl font-bold font-sans">{t('erp_inventory_admin_hub')}</h2>
           <p className="text-xs text-slate-500">إدارة البضائع، نقل كميات المخازن بين الفروع والمصاريف وتوثيق المشتريات.</p>
         </div>
 
@@ -640,26 +680,26 @@ export const ERP: React.FC = () => {
             onClick={() => setActiveSubTab('products')}
             className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'products' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
           >
-            {businessType === 'restaurant' ? (isRtl ? 'إضافة الوجبات والمنتجات' : 'Add Meals & Products') : (isRtl ? 'قائمة المنتجات' : 'Products')}
+            {businessType === 'restaurant' ? (t('add_meals_products')) : (t('products'))}
           </button>
           <button
             onClick={() => setActiveSubTab('inventory')}
             className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'inventory' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
           >
-            {businessType === 'restaurant' ? (isRtl ? 'مستودع المكونات والمخزون' : 'Ingredients Warehouse') : (isRtl ? 'المستودعات والتحويل' : 'Warehouses & Transfer')}
+            {businessType === 'restaurant' ? (t('ingredients_warehouse')) : (t('warehouses_transfer'))}
           </button>
           <button
             onClick={() => setActiveSubTab('purchases')}
             className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'purchases' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
           >
-            {isRtl ? 'إدارة الموردين' : 'Suppliers Hub'}
+            {t('suppliers_hub')}
           </button>
           {businessType !== 'restaurant' && (
             <button
               onClick={() => setActiveSubTab('expenses')}
               className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'expenses' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
             >
-              {isRtl ? 'إدارة المصروفات' : 'Expenses'}
+              {t('expenses')}
             </button>
           )}
           {businessType === 'restaurant' && (
@@ -667,7 +707,7 @@ export const ERP: React.FC = () => {
               onClick={() => setActiveSubTab('recipes')}
               className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'recipes' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
             >
-              {isRtl ? 'وصفات المواد الخام' : 'Recipes & BOM'}
+              {t('recipes_bom')}
             </button>
           )}
           {businessType === 'pharmacy' && (
@@ -675,7 +715,7 @@ export const ERP: React.FC = () => {
               onClick={() => setActiveSubTab('approvals')}
               className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'approvals' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
             >
-              {isRtl ? 'التصاريح الطبية والبدائل' : 'SFDA & Substitutions'}
+              {t('sfda_substitutions')}
             </button>
           )}
           {businessType === 'clothing' && (
@@ -683,7 +723,7 @@ export const ERP: React.FC = () => {
               onClick={() => setActiveSubTab('variants')}
               className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'variants' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
             >
-              {isRtl ? 'مصفوفة المقاسات والألوان' : 'SKU Variant Matrix'}
+              {t('sku_variant_matrix')}
             </button>
           )}
           {businessType === 'electronics' && (
@@ -691,7 +731,7 @@ export const ERP: React.FC = () => {
               onClick={() => setActiveSubTab('shipments')}
               className={`px-3 py-1.5 rounded-lg transition-all ${activeSubTab === 'shipments' ? 'bg-white dark:bg-slate-700 text-indigo-950 dark:text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
             >
-              {isRtl ? 'حاويات الشحن والجمارك' : 'Shipments & Customs'}
+              {t('shipments_customs')}
             </button>
           )}
         </div>
@@ -712,11 +752,22 @@ export const ERP: React.FC = () => {
                 <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
               </div>
               <button
-                onClick={() => setShowAddProdModal(true)}
+                onClick={() => {
+                  setEditingProdId(null);
+                  setProdNameEn('');
+                  setProdNameAr('');
+                  setProdSku('');
+                  setProdBarcode('');
+                  setProdPrice(0);
+                  setProdCost(0);
+                  setIsPhar(false);
+                  setProdImageBase64('');
+                  setShowAddProdModal(true);
+                }}
                 className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                {isRtl ? 'إضافة منتج جديد' : 'Add Product'}
+                {t('add_product')}
               </button>
             </div>
 
@@ -726,12 +777,12 @@ export const ERP: React.FC = () => {
                 <table className="w-full text-xs text-right">
                   <thead className="sticky top-0 bg-slate-100/90 dark:bg-slate-900/95 backdrop-blur-sm text-slate-500 border-b">
                     <tr>
-                      <th className="p-3 py-3.5">{isRtl ? 'المنتج' : 'Product Name'}</th>
+                      <th className="p-3 py-3.5">{t('product_name')}</th>
                       <th className="p-3">SKU</th>
-                      <th className="p-3">{isRtl ? 'سعر البيع' : 'Sale Price'}</th>
-                      <th className="p-3">{isRtl ? 'سعر التكلفة' : 'Cost'}</th>
-                      <th className="p-3">{isRtl ? 'التصنيف' : 'Category'}</th>
-                      <th className="p-3">{isRtl ? 'المخزون الإجمالي' : 'Total Stock'}</th>
+                      <th className="p-3">{t('sale_price')}</th>
+                      <th className="p-3">{t('cost')}</th>
+                      <th className="p-3">{t('category')}</th>
+                      <th className="p-3">{t('total_stock')}</th>
                       <th className="p-3 text-left"></th>
                     </tr>
                   </thead>
@@ -754,19 +805,29 @@ export const ERP: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-3 text-slate-500 font-sans">{p.sku}</td>
-                        <td className="p-3 font-semibold font-sans">{p.price.toFixed(2)} SAR</td>
-                        <td className="p-3 text-slate-500 font-sans">{p.cost.toFixed(2)} SAR</td>
+                        <td className="p-3 font-semibold font-sans">{p.price.toFixed(2)} {currency}</td>
+                        <td className="p-3 text-slate-500 font-sans">{p.cost.toFixed(2)} {currency}</td>
                         <td className="p-3"><span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-bold">{p.category}</span></td>
                         <td className="p-3 font-bold font-sans">
                           {p.stock !== undefined ? p.stock : 8} {p.unit}
                         </td>
                         <td className="p-3 text-left">
-                          <button
-                            onClick={() => handleDeleteProduct(p.id)}
-                            className="p-1 text-red-500 hover:bg-red-500/10 rounded"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <button
+                              onClick={() => handleEditProductClick(p)}
+                              className="p-1.5 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                              title={t('edit')}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(p.id)}
+                              className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                              title={t('delete')}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -782,7 +843,7 @@ export const ERP: React.FC = () => {
                     disabled={productsPage === 1}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
                   >
-                    {isRtl ? 'السابق' : 'Previous'}
+                    {t('previous')}
                   </button>
                   <span className="font-bold text-slate-500">
                     {isRtl ? `الصفحة ${productsPage} من ${totalProductsPages}` : `Page ${productsPage} of ${totalProductsPages}`}
@@ -792,7 +853,7 @@ export const ERP: React.FC = () => {
                     disabled={productsPage === totalProductsPages}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
                   >
-                    {isRtl ? 'التالي' : 'Next'}
+                    {t('next')}
                   </button>
                 </div>
               )}
@@ -806,18 +867,18 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4 animate-fade-in">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <Archive className="h-4.5 w-4.5 text-blue-500" />
-                {isRtl ? 'المخزون الحالي والباتشات في المستودعات' : 'Inventory & Batches'}
+                {t('inventory_batches')}
               </h3>
 
               <div className="overflow-x-auto max-h-[360px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
-                      <th className="py-2">{isRtl ? 'المنتج' : 'Product'}</th>
-                      <th>{isRtl ? 'المستودع' : 'Warehouse'}</th>
-                      <th>{isRtl ? 'رقم الدفعة (Batch)' : 'Batch No'}</th>
-                      <th>{isRtl ? 'تاريخ الانتهاء' : 'Expiry'}</th>
-                      <th className="text-left">{isRtl ? 'الكمية' : 'Qty'}</th>
+                      <th className="py-2">{t('product')}</th>
+                      <th>{t('warehouse')}</th>
+                      <th>{t('batch_no')}</th>
+                      <th>{t('expiry')}</th>
+                      <th className="text-left">{t('qty')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -827,10 +888,10 @@ export const ERP: React.FC = () => {
                       
                       // Get dynamic warehouse name
                       const getWhName = (whId: string) => {
-                        if (whId === 'wh_riyadh_1') return isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1';
-                        if (whId === 'wh_riyadh_2') return isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh WH2';
-                        if (whId === 'wh_kitchen') return isRtl ? 'مستودع المطبخ (المواد الخام)' : 'Kitchen Raw WH';
-                        if (whId === 'wh_restaurant_main') return isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH';
+                        if (whId === 'wh_main_1') return t('primary_warehouse');
+                        if (whId === 'wh_main_2') return t('pharmacy_depot');
+                        if (whId === 'wh_kitchen') return t('kitchen_raw_wh');
+                        if (whId === 'wh_restaurant_main') return t('restaurant_main_wh');
                         return whId;
                       };
 
@@ -855,12 +916,12 @@ export const ERP: React.FC = () => {
               <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
                 <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                   <Plus className="h-4.5 w-4.5 text-blue-500" />
-                  {isRtl ? 'إدخال شحنة مخزون للمستودع' : 'Add Stock / Batch'}
+                  {t('add_stock_batch')}
                 </h3>
 
                 <form onSubmit={handleAddBatchStock} className="space-y-3.5 text-xs font-semibold">
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'اختر المنتج' : 'Select Product'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('select_product')}</label>
                     <select
                       value={addBatchProdId}
                       onChange={e => setAddBatchProdId(e.target.value)}
@@ -873,7 +934,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'المستودع' : 'Warehouse'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('warehouse')}</label>
                     <select
                       value={addBatchWh}
                       onChange={e => setAddBatchWh(e.target.value)}
@@ -881,25 +942,25 @@ export const ERP: React.FC = () => {
                     >
                       {businessType === 'restaurant' ? (
                         <>
-                          <option value="wh_kitchen">{isRtl ? 'مستودع المطبخ والمكونات' : 'Kitchen WH'}</option>
-                          <option value="wh_restaurant_main">{isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH'}</option>
+                          <option value="wh_kitchen">{t('kitchen_wh')}</option>
+                          <option value="wh_restaurant_main">{t('restaurant_main_wh')}</option>
                         </>
                       ) : businessType === 'pharmacy' ? (
                         <>
-                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
-                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                          <option value="wh_main_2">{t('pharmacy_depot')}</option>
+                          <option value="wh_main_1">{t('primary_warehouse')}</option>
                         </>
                       ) : (
                         <>
-                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
-                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                          <option value="wh_main_1">{t('primary_warehouse')}</option>
+                          <option value="wh_main_2">{t('pharmacy_depot')}</option>
                         </>
                       )}
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'رقم الدفعة (Batch No) - اختياري' : 'Batch Number (Optional)'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('batch_number_optional')}</label>
                     <input
                       type="text"
                       placeholder="BCH-1092"
@@ -910,7 +971,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'تاريخ الانتهاء - اختياري' : 'Expiry Date (Optional)'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('expiry_date_optional')}</label>
                     <input
                       type="date"
                       value={addBatchExpiry}
@@ -920,7 +981,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'الكمية المضافة' : 'Quantity to Add'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('quantity_to_add')}</label>
                     <input
                       type="number"
                       required
@@ -936,7 +997,7 @@ export const ERP: React.FC = () => {
                     type="submit"
                     className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all"
                   >
-                    {isRtl ? 'تنزيل كمية المخزون' : 'Add Stock / Batch'}
+                    {t('add_stock_batch')}
                   </button>
                 </form>
               </div>
@@ -945,12 +1006,12 @@ export const ERP: React.FC = () => {
               <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
                 <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                   <ArrowLeftRight className="h-4.5 w-4.5 text-emerald-500" />
-                  {isRtl ? 'تحويل مخزون داخلي بين الفروع' : 'Stock Transfer Request'}
+                  {t('stock_transfer_request')}
                 </h3>
 
                 <form onSubmit={handleStockTransfer} className="space-y-3.5 text-xs font-semibold">
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'المستودع المصدر' : 'Source Warehouse'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('source_warehouse')}</label>
                     <select
                       value={fromWh}
                       onChange={e => setFromWh(e.target.value)}
@@ -958,25 +1019,25 @@ export const ERP: React.FC = () => {
                     >
                       {businessType === 'restaurant' ? (
                         <>
-                          <option value="wh_kitchen">{isRtl ? 'مستودع المطبخ والمكونات' : 'Kitchen WH'}</option>
-                          <option value="wh_restaurant_main">{isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH'}</option>
+                          <option value="wh_kitchen">{t('kitchen_wh')}</option>
+                          <option value="wh_restaurant_main">{t('restaurant_main_wh')}</option>
                         </>
                       ) : businessType === 'pharmacy' ? (
                         <>
-                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
-                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                          <option value="wh_main_2">{t('pharmacy_depot')}</option>
+                          <option value="wh_main_1">{t('primary_warehouse')}</option>
                         </>
                       ) : (
                         <>
-                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
-                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                          <option value="wh_main_1">{t('primary_warehouse')}</option>
+                          <option value="wh_main_2">{t('pharmacy_depot')}</option>
                         </>
                       )}
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'المستودع الوجهة' : 'Destination Warehouse'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('destination_warehouse')}</label>
                     <select
                       value={toWh}
                       onChange={e => setToWh(e.target.value)}
@@ -984,25 +1045,25 @@ export const ERP: React.FC = () => {
                     >
                       {businessType === 'restaurant' ? (
                         <>
-                          <option value="wh_restaurant_main">{isRtl ? 'مستودع المطعم الرئيسي' : 'Restaurant Main WH'}</option>
-                          <option value="wh_kitchen">{isRtl ? 'مستودع المطبخ والمكونات' : 'Kitchen WH'}</option>
+                          <option value="wh_restaurant_main">{t('restaurant_main_wh')}</option>
+                          <option value="wh_kitchen">{t('kitchen_wh')}</option>
                         </>
                       ) : businessType === 'pharmacy' ? (
                         <>
-                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
-                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
+                          <option value="wh_main_1">{t('primary_warehouse')}</option>
+                          <option value="wh_main_2">{t('pharmacy_depot')}</option>
                         </>
                       ) : (
                         <>
-                          <option value="wh_riyadh_2">{isRtl ? 'مستودع صيدلية الرياض' : 'Riyadh Pharmacy WH'}</option>
-                          <option value="wh_riyadh_1">{isRtl ? 'مستودع الرياض الأول' : 'Riyadh WH1'}</option>
+                          <option value="wh_main_2">{t('pharmacy_depot')}</option>
+                          <option value="wh_main_1">{t('primary_warehouse')}</option>
                         </>
                       )}
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'اختر المنتج للتحويل' : 'Select Product to Transfer'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('select_product_to_transfer')}</label>
                     <select
                       value={transferProdId}
                       onChange={e => setTransferProdId(e.target.value)}
@@ -1015,7 +1076,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'الكمية للتحويل' : 'Quantity'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('quantity')}</label>
                     <input
                       type="number"
                       required
@@ -1030,7 +1091,7 @@ export const ERP: React.FC = () => {
                     type="submit"
                     className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all"
                   >
-                    {isRtl ? 'إتمام تحويل الكمية' : 'Submit Transfer'}
+                    {t('submit_transfer')}
                   </button>
                 </form>
               </div>
@@ -1044,18 +1105,18 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <Landmark className="h-4.5 w-4.5 text-indigo-500" />
-                {isRtl ? 'الموردين والشركات المسجلين' : 'ERP Suppliers'}
+                {t('erp_suppliers')}
               </h3>
 
               <div className="overflow-x-auto max-h-[360px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
-                      <th className="py-2">{isRtl ? 'الشركة' : 'Vendor'}</th>
-                      <th>{isRtl ? 'مسؤول المبيعات' : 'Contact Person'}</th>
-                      <th>{isRtl ? 'الهاتف' : 'Phone'}</th>
-                      <th>{isRtl ? 'مستحقات معلقة للمورد' : 'Balance'}</th>
-                      <th className="text-left">{isRtl ? 'إجراءات' : 'Actions'}</th>
+                      <th className="py-2">{t('vendor')}</th>
+                      <th>{t('contact_person')}</th>
+                      <th>{t('phone')}</th>
+                      <th>{t('balance')}</th>
+                      <th className="text-left">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1065,7 +1126,7 @@ export const ERP: React.FC = () => {
                         <td className="text-slate-500">{s.contact_name}</td>
                         <td className="text-slate-500 font-sans">{s.phone}</td>
                         <td className={`font-bold font-sans ${s.balance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                          {s.balance.toFixed(2)} SAR
+                          {s.balance.toFixed(2)} {currency}
                         </td>
                         <td className="text-left py-2.5">
                           <button
@@ -1088,16 +1149,16 @@ export const ERP: React.FC = () => {
               <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
                 <h3 className="font-bold text-sm border-b pb-2 flex items-center gap-1.5">
                   <Plus className="h-4.5 w-4.5 text-blue-500" />
-                  {isRtl ? 'إضافة مورد جديد' : 'Add New Supplier'}
+                  {t('add_new_supplier')}
                 </h3>
 
                 <form onSubmit={handleAddSupplier} className="space-y-3.5 text-xs font-semibold">
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'اسم الشركة / المورد*' : 'Supplier / Company Name*'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('supplier_company_name')}</label>
                     <input
                       type="text"
                       required
-                      placeholder={isRtl ? 'شركة الأغذية الحديثة' : 'Modern Food Co.'}
+                      placeholder={t('modern_food_co')}
                       value={supName}
                       onChange={e => setSupName(e.target.value)}
                       className="w-full px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 focus:outline-none"
@@ -1105,7 +1166,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'مسؤول المبيعات' : 'Contact Person'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('contact_person')}</label>
                     <input
                       type="text"
                       placeholder="محمد حسن"
@@ -1116,7 +1177,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'رقم الهاتف' : 'Phone'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('phone')}</label>
                     <input
                       type="text"
                       placeholder="0112883838"
@@ -1127,7 +1188,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'البريد الإلكتروني' : 'Email Address'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{t('email_address')}</label>
                     <input
                       type="email"
                       placeholder="supplier@mail.com"
@@ -1138,7 +1199,7 @@ export const ERP: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'الرصيد المعلق (ريال سعودي)' : 'Initial Balance (SAR)'}</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? `الرصيد المعلق (${currency})` : `Initial Balance (${currency})`}</label>
                     <input
                       type="number"
                       placeholder="-1000"
@@ -1152,17 +1213,17 @@ export const ERP: React.FC = () => {
                     type="submit"
                     className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all animate-pulse"
                   >
-                    {isRtl ? 'حفظ وتثبيت المورد' : 'Add Supplier'}
+                    {t('add_supplier')}
                   </button>
                 </form>
               </div>
 
               {/* Purchase logs */}
               <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
-                <h3 className="font-bold text-sm border-b pb-2">📋 {isRtl ? 'طلبات توريد المشتريات' : 'Purchase Orders'}</h3>
+                <h3 className="font-bold text-sm border-b pb-2">📋 {t('purchase_orders')}</h3>
                 {purchases.length === 0 ? (
                   <div className="text-center text-xs py-8 text-slate-400">
-                    {isRtl ? 'لا توجد فواتير شراء حالية' : 'No purchase orders yet'}
+                    {t('no_purchase_orders_yet')}
                   </div>
                 ) : (
                   purchases.map(p => (
@@ -1171,7 +1232,7 @@ export const ERP: React.FC = () => {
                         <span className="font-bold">{p.id}</span>
                         <span className="text-slate-400">{p.created_at}</span>
                       </div>
-                      <div>المجموع: {p.total} SAR</div>
+                      <div>المجموع: {p.total} {currency}</div>
                       <div className="text-emerald-500 font-semibold">{p.status}</div>
                     </div>
                   ))
@@ -1187,7 +1248,7 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <DollarSign className="h-4.5 w-4.5 text-blue-500" />
-                {isRtl ? 'تسجيل سند صرف مصروف جديد' : 'Log New Expense Voucher'}
+                {t('log_new_expense_voucher')}
               </h3>
 
               <form onSubmit={handleAddExpense} className="space-y-3.5 text-xs font-semibold">
@@ -1239,16 +1300,16 @@ export const ERP: React.FC = () => {
 
             {/* Expenses List */}
             <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4">
-              <h3 className="font-bold text-sm border-b pb-2">🧾 {isRtl ? 'سندات الصرف والمصروفات المسجلة' : 'Expenses Vouchers'}</h3>
+              <h3 className="font-bold text-sm border-b pb-2">🧾 {t('expenses_vouchers')}</h3>
               
               <div className="overflow-x-auto max-h-[300px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
-                      <th className="py-2">{isRtl ? 'التاريخ' : 'Date'}</th>
-                      <th>{isRtl ? 'التصنيف' : 'Category'}</th>
-                      <th>{isRtl ? 'الشرح' : 'Description'}</th>
-                      <th className="text-left">{isRtl ? 'المبلغ' : 'Amount'}</th>
+                      <th className="py-2">{t('date')}</th>
+                      <th>{t('category')}</th>
+                      <th>{t('description')}</th>
+                      <th className="text-left">{t('amount')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1257,7 +1318,7 @@ export const ERP: React.FC = () => {
                         <td className="py-2.5 text-slate-400">{new Date(ex.date).toLocaleDateString()}</td>
                         <td className="font-bold">{ex.category}</td>
                         <td className="text-slate-500">{ex.description}</td>
-                        <td className="text-left font-bold text-red-500 font-sans">-{ex.amount.toFixed(2)} SAR</td>
+                        <td className="text-left font-bold text-red-500 font-sans">-{ex.amount.toFixed(2)} {currency}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1273,7 +1334,7 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <BookOpen className="h-4.5 w-4.5 text-orange-500" />
-                {isRtl ? 'تحديد مكونات المواد الخام للوجبة' : 'Configure Menu Item BOM Recipe'}
+                {t('configure_menu_item_bom_recipe')}
               </h3>
 
               <div className="space-y-3.5 text-xs font-semibold">
@@ -1377,16 +1438,16 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <Layers className="h-4.5 w-4.5 text-blue-500" />
-                {isRtl ? 'قائمة الوصفات ومطابقة تكلفة المواد الخام' : 'Recipe & Raw Materials Cost Matching'}
+                {t('recipe_raw_materials_cost_matching')}
               </h3>
 
               <div className="overflow-x-auto max-h-[360px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
-                      <th className="py-2">{isRtl ? 'الوجبة النهائية' : 'Final Item'}</th>
-                      <th>{isRtl ? 'مكونات التحضير' : 'Ingredients (BOM)'}</th>
-                      <th className="text-left">{isRtl ? 'تكلفة المواد التقريبية' : 'BOM Cost'}</th>
+                      <th className="py-2">{t('final_item')}</th>
+                      <th>{t('ingredients_bom')}</th>
+                      <th className="text-left">{t('bom_cost')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1404,7 +1465,7 @@ export const ERP: React.FC = () => {
                             {parsedRecipe.map(ing => `${ing.name} (${ing.qty}${ing.unit})`).join(' + ')}
                           </td>
                           <td className="text-left font-bold text-emerald-500 font-sans">
-                            {(p.cost * 0.85).toFixed(2)} SAR
+                            {(p.cost * 0.85).toFixed(2)} {currency}
                           </td>
                         </tr>
                       );
@@ -1412,7 +1473,7 @@ export const ERP: React.FC = () => {
                     {products.filter(p => p.recipe).length === 0 && (
                       <tr>
                         <td colSpan={3} className="text-center py-8 text-slate-400">
-                          {isRtl ? 'لا يوجد وصفات مسجلة بعد. حدد وجبة من اليمين وابدأ بتسجيل مكوناتها.' : 'No recipes logged. Select an item from the form to register BOM.'}
+                          {t('no_recipes_logged_select_an_item_from_the_form_to_register_bom')}
                         </td>
                       </tr>
                     )}
@@ -1429,7 +1490,7 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <ShieldAlert className="h-4.5 w-4.5 text-blue-500" />
-                {isRtl ? 'تسجيل رقم تصريح هيئة الدواء SFDA' : 'Register SFDA Medicine Code'}
+                {t('register_sfda_medicine_code')}
               </h3>
 
               <form onSubmit={handleUpdateApproval} className="space-y-3.5 text-xs font-semibold">
@@ -1477,17 +1538,17 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <CheckCircle className="h-4.5 w-4.5 text-emerald-500" />
-                {isRtl ? 'سجل الأدوية وحالة التراخيص الطبية' : 'Medical Approvals & Expiry Registers'}
+                {t('medical_approvals_expiry_registers')}
               </h3>
 
               <div className="overflow-x-auto max-h-[360px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
-                      <th className="py-2">{isRtl ? 'الدواء الطبي' : 'Medicine'}</th>
-                      <th>{isRtl ? 'الاسم العلمي' : 'Scientific Name'}</th>
-                      <th>{isRtl ? 'ترخيص SFDA' : 'SFDA Code'}</th>
-                      <th className="text-left">{isRtl ? 'حالة الاعتماد' : 'Status'}</th>
+                      <th className="py-2">{t('medicine')}</th>
+                      <th>{t('scientific_name')}</th>
+                      <th>{t('sfda_code')}</th>
+                      <th className="text-left">{t('status_1')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1499,11 +1560,11 @@ export const ERP: React.FC = () => {
                         <td className="text-left font-bold">
                           {p.approval_id ? (
                             <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-bold">
-                              {isRtl ? 'معتمد ومصرح' : 'Approved'}
+                              {t('approved')}
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 font-bold animate-pulse">
-                              {isRtl ? 'تحت التدقيق' : 'Pending SFDA'}
+                              {t('pending_sfda')}
                             </span>
                           )}
                         </td>
@@ -1522,7 +1583,7 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <Palette className="h-4.5 w-4.5 text-purple-500" />
-                {isRtl ? 'توليد مصفوفة المقاسات والألوان' : 'SKU Variant Matrix Generator'}
+                {t('sku_variant_matrix_generator')}
               </h3>
 
               <div className="space-y-3.5 text-xs font-semibold">
@@ -1632,7 +1693,7 @@ export const ERP: React.FC = () => {
               <div className="flex justify-between items-center border-b pb-2">
                 <h3 className="font-bold text-sm flex items-center gap-1.5">
                   <Maximize2 className="h-4.5 w-4.5 text-blue-500" />
-                  {isRtl ? 'معاينة المتغيرات الناتجة قبل الحفظ' : 'Preview Matrix SKUs'}
+                  {t('preview_matrix_skus')}
                 </h3>
                 {generatedMatrix.length > 0 && (
                   <button
@@ -1649,7 +1710,7 @@ export const ERP: React.FC = () => {
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
-                      <th className="py-2">{isRtl ? 'الاسم' : 'Name'}</th>
+                      <th className="py-2">{t('name')}</th>
                       <th>SKU</th>
                       <th>الباركود</th>
                       <th>سعر البيع</th>
@@ -1751,7 +1812,7 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <Ship className="h-4.5 w-4.5 text-teal-500" />
-                {isRtl ? 'تسجيل شحنة حاوية استيراد' : 'Log Import Container Shipment'}
+                {t('log_import_container_shipment')}
               </h3>
 
               <form onSubmit={handleAddShipment} className="space-y-3.5 text-xs font-semibold">
@@ -1845,24 +1906,24 @@ export const ERP: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm md:col-span-2 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-1.5 border-b pb-2">
                 <Coins className="h-4.5 w-4.5 text-blue-500" />
-                {isRtl ? 'تتبع مسار الشحنات وحاسبة الرسوم الجمركية والعملات' : 'Wholesale Cargo Tracking & Customs Invoice Converter'}
+                {t('wholesale_cargo_tracking_customs_invoice_converter')}
               </h3>
 
               <div className="overflow-x-auto max-h-[340px]">
                 <table className="w-full text-xs text-right">
                   <thead>
                     <tr className="border-b text-slate-400">
-                      <th className="py-2">{isRtl ? 'الحاوية والسلع' : 'Container'}</th>
-                      <th>{isRtl ? 'مسار الشحن' : 'Route'}</th>
-                      <th>{isRtl ? 'الفاتورة بالـ USD والـ SAR' : 'Invoice Value'}</th>
-                      <th>{isRtl ? 'الرسوم الجمركية' : 'Customs Tariff'}</th>
-                      <th className="text-left">{isRtl ? 'حالة الشحن' : 'Status'}</th>
+                      <th className="py-2">{t('container')}</th>
+                      <th>{t('route')}</th>
+                      <th>{isRtl ? `الفاتورة بالـ USD والـ ${currency}` : 'Invoice Value'}</th>
+                      <th>{t('customs_tariff')}</th>
+                      <th className="text-left">{t('status_1')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {shipments.map(s => {
-                      const priceInSar = s.invoiceUsd * 3.75;
-                      const customsFeeInSar = priceInSar * (s.tariffRate / 100);
+                      const priceInLocal = s.invoiceUsd * 3.75;
+                      const customsFeeInLocal = priceInLocal * (s.tariffRate / 100);
                       return (
                         <tr key={s.id} className="border-b border-slate-100 dark:border-slate-800/40 py-2.5">
                           <td className="py-2.5">
@@ -1875,10 +1936,10 @@ export const ERP: React.FC = () => {
                           </td>
                           <td>
                             <div className="font-sans font-bold">${s.invoiceUsd.toLocaleString()}</div>
-                            <div className="text-[10px] text-indigo-500 font-bold font-sans">({priceInSar.toLocaleString()} SAR)</div>
+                            <div className="text-[10px] text-indigo-500 font-bold font-sans">({priceInLocal.toLocaleString()} {currency})</div>
                           </td>
                           <td>
-                            <div className="font-bold font-sans text-red-500">+{customsFeeInSar.toFixed(2)} SAR</div>
+                            <div className="font-bold font-sans text-red-500">+{customsFeeInLocal.toFixed(2)} {currency}</div>
                             <div className="text-[10px] text-slate-400">معدل: {s.tariffRate}%</div>
                           </td>
                           <td className="text-left">
@@ -1887,9 +1948,9 @@ export const ERP: React.FC = () => {
                               onChange={e => handleUpdateShipmentStatus(s.id, e.target.value as any)}
                               className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold border-none focus:outline-none cursor-pointer"
                             >
-                              <option value="at_sea">🚢 {isRtl ? 'عرض البحر' : 'At Sea'}</option>
-                              <option value="customs">🛃 {isRtl ? 'التخليص الجمركي' : 'Customs'}</option>
-                              <option value="delivered">📦 {isRtl ? 'تم الاستلام' : 'Delivered'}</option>
+                              <option value="at_sea">🚢 {t('at_sea')}</option>
+                              <option value="customs">🛃 {t('customs')}</option>
+                              <option value="delivered">📦 {t('delivered')}</option>
                             </select>
                           </td>
                         </tr>
@@ -1909,13 +1970,13 @@ export const ERP: React.FC = () => {
           <form onSubmit={handleAddProduct} className="glass-card p-6 rounded-2xl max-w-lg w-full space-y-4 animate-fade-in text-right">
             <div className="flex justify-between items-center border-b pb-2">
               <h3 className="font-bold text-base">
-                {isRtl ? 'إضافة منتج جديد وتوليد باركود تلقائي' : 'Register New ERP Product'}
+                {editingProdId ? (t('edit_product_details')) : (t('register_new_erp_product'))}
               </h3>
               <span className="text-[10px] text-indigo-500 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">
-                {businessType === 'restaurant' ? (isRtl ? 'مطعم' : 'Restaurant') :
-                 businessType === 'supermarket' ? (isRtl ? 'سوبر ماركت' : 'Supermarket') :
-                 businessType === 'pharmacy' ? (isRtl ? 'صيدلية' : 'Pharmacy') :
-                 businessType === 'clothing' ? (isRtl ? 'ملابس' : 'Clothing') : (isRtl ? 'إلكترونيات' : 'Electronics')}
+                {businessType === 'restaurant' ? (t('restaurant')) :
+                 businessType === 'supermarket' ? (t('supermarket')) :
+                 businessType === 'pharmacy' ? (t('pharmacy')) :
+                 businessType === 'clothing' ? (t('clothing')) : (t('electronics'))}
               </span>
             </div>
 
@@ -1926,14 +1987,14 @@ export const ERP: React.FC = () => {
                 onClick={() => setModalSimpleMode(true)}
                 className={`flex-1 py-1.5 rounded-lg transition-all ${modalSimpleMode ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-xs' : 'text-slate-400'}`}
               >
-                {isRtl ? 'إضافة مبسطة (موصى به)' : 'Simple Add (Recommended)'}
+                {t('simple_add_recommended')}
               </button>
               <button
                 type="button"
                 onClick={() => setModalSimpleMode(false)}
                 className={`flex-1 py-1.5 rounded-lg transition-all ${!modalSimpleMode ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-xs' : 'text-slate-400'}`}
               >
-                {isRtl ? 'إضافة متقدمة (كامل التفاصيل)' : 'Advanced Add (Full Details)'}
+                {t('advanced_add_full_details')}
               </button>
             </div>
 
@@ -2006,7 +2067,7 @@ export const ERP: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-2 text-center text-[9px] font-bold border-t border-slate-200/50 dark:border-slate-800/50 pt-1.5">
                 <div>
-                  <span className="text-slate-400 block">{isRtl ? 'السعر غير شامل الضريبة:' : 'Excl. VAT Price:'}</span>
+                  <span className="text-slate-400 block">{t('excl_vat_price')}</span>
                   <span className="text-slate-700 dark:text-slate-300 font-sans text-xs">
                     {(isVatInclusive ? prodPrice / (1 + taxPercentage / 100) : prodPrice).toFixed(2)} {currency}
                   </span>
@@ -2018,7 +2079,7 @@ export const ERP: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">{isRtl ? 'السعر النهائي للعميل:' : 'Final Sale Price:'}</span>
+                  <span className="text-slate-400 block">{t('final_sale_price')}</span>
                   <span className="text-emerald-500 font-sans text-xs">
                     {(isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100)).toFixed(2)} {currency}
                   </span>
@@ -2028,17 +2089,17 @@ export const ERP: React.FC = () => {
 
             {/* Quick Profit Calculator Panel */}
             <div className="bg-slate-100/50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-2">
-              <span className="text-[10px] text-slate-500 font-bold block">{isRtl ? 'حاسبة هامش الأرباح التلقائية:' : 'Smart Profit Margin Calculator:'}</span>
+              <span className="text-[10px] text-slate-500 font-bold block">{t('smart_profit_margin_calculator')}</span>
               <div className="flex gap-4 justify-between items-center text-[10px] font-bold">
                 <span className="text-slate-400">
-                  {isRtl ? 'هامش ربح المبيعات:' : 'Margin:'} <span className="text-emerald-500 font-sans text-xs">{((isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100)) > 0 ? (((isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100)) - prodCost) / (isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100))) * 100 : 0).toFixed(1)}%</span>
+                  {t('margin')} <span className="text-emerald-500 font-sans text-xs">{((isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100)) > 0 ? (((isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100)) - prodCost) / (isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100))) * 100 : 0).toFixed(1)}%</span>
                 </span>
                 <span className="text-slate-400">
-                  {isRtl ? 'نسبة الربح المضافة (Markup):' : 'Markup:'} <span className="text-blue-500 font-sans text-xs">{(prodCost > 0 ? (((isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100)) - prodCost) / prodCost) * 100 : 0).toFixed(1)}%</span>
+                  {t('markup')} <span className="text-blue-500 font-sans text-xs">{(prodCost > 0 ? (((isVatInclusive ? prodPrice : prodPrice * (1 + taxPercentage / 100)) - prodCost) / prodCost) * 100 : 0).toFixed(1)}%</span>
                 </span>
               </div>
               <div className="flex gap-1.5 text-[9px] font-extrabold flex-wrap pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-                <span className="text-slate-400 self-center">{isRtl ? 'تطبيق ربح مضاف سريع من التكلفة:' : 'Apply Quick Cost Markup:'}</span>
+                <span className="text-slate-400 self-center">{t('apply_quick_cost_markup')}</span>
                 <button type="button" onClick={() => handleApplyMarkup(15)} className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white transition-all">+15%</button>
                 <button type="button" onClick={() => handleApplyMarkup(25)} className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white transition-all">+25%</button>
                 <button type="button" onClick={() => handleApplyMarkup(35)} className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white transition-all">+35%</button>
@@ -2048,7 +2109,7 @@ export const ERP: React.FC = () => {
 
             {/* Image Upload Section (TASK E) */}
             <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2">
-              <span className="text-[10px] text-slate-500 font-bold block">{isRtl ? '🖼️ صورة المنتج (اختياري):' : '🖼️ Product Image (optional):'}</span>
+              <span className="text-[10px] text-slate-500 font-bold block">{t('product_image_optional')}</span>
               <div className="flex items-center gap-3">
                 {prodImageBase64 ? (
                   <div className="relative">
@@ -2075,7 +2136,7 @@ export const ERP: React.FC = () => {
                     onChange={handleImageUpload}
                     className="w-full text-xs text-slate-600 dark:text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
                   />
-                  <p className="text-[9px] text-slate-400 mt-1">{isRtl ? 'تقبل جميع صيغ الصور. يتم ضغطها تلقائياً إلى 300×300 بكسل.' : 'Accepts all image formats. Auto-resized to 300×300px.'}</p>
+                  <p className="text-[9px] text-slate-400 mt-1">{t('accepts_all_image_formats_auto_resized_to_300300px')}</p>
                 </div>
               </div>
             </div>
@@ -2126,7 +2187,7 @@ export const ERP: React.FC = () => {
 
                 {/* Conditional categories choices based on business type */}
                 <div>
-                  <label className="text-[10px] text-slate-500 block mb-1">{isRtl ? 'التصنيف' : 'Category'}</label>
+                  <label className="text-[10px] text-slate-500 block mb-1">{t('category')}</label>
                   <select
                     value={prodCategory}
                     onChange={e => setProdCategory(e.target.value)}
@@ -2134,56 +2195,56 @@ export const ERP: React.FC = () => {
                   >
                     {businessType === 'restaurant' && (
                       <>
-                        <option value="meal">{isRtl ? 'وجبة رئيسية' : 'Main Meal'}</option>
-                        <option value="drink">{isRtl ? 'مشروبات وعصائر' : 'Drink / Beverage'}</option>
-                        <option value="dessert">{isRtl ? 'حلويات' : 'Dessert'}</option>
-                        <option value="addition">{isRtl ? 'إضافات' : 'Additions'}</option>
-                        <option value="size">{isRtl ? 'أحجام' : 'Sizes'}</option>
-                        <option value="table">{isRtl ? 'طاولات' : 'Tables'}</option>
-                        <option value="kitchen">{isRtl ? 'مطبخ' : 'Kitchen'}</option>
-                        <option value="item">{isRtl ? 'أصناف' : 'Items'}</option>
-                        <option value="raw_material">{isRtl ? 'مواد خام للمطبخ' : 'Kitchen Raw Material'}</option>
+                        <option value="meal">{t('main_meal')}</option>
+                        <option value="drink">{t('drink_beverage')}</option>
+                        <option value="dessert">{t('dessert')}</option>
+                        <option value="addition">{t('additions')}</option>
+                        <option value="size">{t('sizes')}</option>
+                        <option value="table">{t('tables')}</option>
+                        <option value="kitchen">{t('kitchen')}</option>
+                        <option value="item">{t('items')}</option>
+                        <option value="raw_material">{t('kitchen_raw_material')}</option>
                       </>
                     )}
                     {businessType === 'supermarket' && (
                       <>
-                        <option value="food">{isRtl ? 'مواد غذائية' : 'Food Items'}</option>
-                        <option value="cleaner">{isRtl ? 'منظفات' : 'Cleaning Agents'}</option>
-                        <option value="drink">{isRtl ? 'مشروبات' : 'Drinks'}</option>
-                        <option value="frozen">{isRtl ? 'مجمدات' : 'Frozen Foods'}</option>
-                        <option value="bakery">{isRtl ? 'مخبوزات' : 'Bakery'}</option>
-                        <option value="vegetable">{isRtl ? 'خضروات' : 'Vegetables'}</option>
-                        <option value="fruit">{isRtl ? 'فواكه' : 'Fruits'}</option>
+                        <option value="food">{t('food_items')}</option>
+                        <option value="cleaner">{t('cleaning_agents')}</option>
+                        <option value="drink">{t('drinks')}</option>
+                        <option value="frozen">{t('frozen_foods')}</option>
+                        <option value="bakery">{t('bakery')}</option>
+                        <option value="vegetable">{t('vegetables')}</option>
+                        <option value="fruit">{t('fruits')}</option>
                       </>
                     )}
                     {businessType === 'pharmacy' && (
                       <>
-                        <option value="medicine">{isRtl ? 'أدوية' : 'Medicines'}</option>
-                        <option value="supplement">{isRtl ? 'مكملات' : 'Supplements'}</option>
-                        <option value="cosmetic">{isRtl ? 'مستحضرات تجميل' : 'Cosmetics'}</option>
-                        <option value="medical_device">{isRtl ? 'أجهزة طبية' : 'Medical Devices'}</option>
-                        <option value="prescription">{isRtl ? 'وصفات' : 'Prescriptions'}</option>
-                        <option value="pharma_company">{isRtl ? 'شركات دواء' : 'Pharma Companies'}</option>
+                        <option value="medicine">{t('medicines')}</option>
+                        <option value="supplement">{t('supplements')}</option>
+                        <option value="cosmetic">{t('cosmetics')}</option>
+                        <option value="medical_device">{t('medical_devices')}</option>
+                        <option value="prescription">{t('prescriptions')}</option>
+                        <option value="pharma_company">{t('pharma_companies')}</option>
                       </>
                     )}
                     {businessType === 'clothing' && (
                       <>
-                        <option value="men">{isRtl ? 'رجالي' : 'Men\'s Wear'}</option>
-                        <option value="women">{isRtl ? 'نسائي' : 'Women\'s Wear'}</option>
-                        <option value="kids">{isRtl ? 'أطفال' : 'Kids\' Wear'}</option>
-                        <option value="shoes">{isRtl ? 'أحذية' : 'Shoes'}</option>
-                        <option value="bags">{isRtl ? 'حقائب' : 'Bags'}</option>
-                        <option value="size">{isRtl ? 'مقاسات' : 'Sizes'}</option>
-                        <option value="color">{isRtl ? 'ألوان' : 'Colors'}</option>
+                        <option value="men">{t('mens_wear')}</option>
+                        <option value="women">{t('womens_wear')}</option>
+                        <option value="kids">{t('kids_wear')}</option>
+                        <option value="shoes">{t('shoes')}</option>
+                        <option value="bags">{t('bags')}</option>
+                        <option value="size">{t('sizes')}</option>
+                        <option value="color">{t('colors')}</option>
                       </>
                     )}
                     {businessType === 'electronics' && (
                       <>
-                        <option value="mobile">{isRtl ? 'موبايلات' : 'Mobiles'}</option>
-                        <option value="computer">{isRtl ? 'كمبيوتر' : 'Computers'}</option>
-                        <option value="accessory">{isRtl ? 'إكسسوارات' : 'Accessories'}</option>
-                        <option value="printer">{isRtl ? 'طابعات' : 'Printers'}</option>
-                        <option value="screen">{isRtl ? 'شاشات' : 'Screens'}</option>
+                        <option value="mobile">{t('mobiles')}</option>
+                        <option value="computer">{t('computers')}</option>
+                        <option value="accessory">{t('accessories')}</option>
+                        <option value="printer">{t('printers')}</option>
+                        <option value="screen">{t('screens')}</option>
                       </>
                     )}
                   </select>
@@ -2194,7 +2255,7 @@ export const ERP: React.FC = () => {
             {/* Simple mode category selection option (show always to guarantee category setting) */}
             {modalSimpleMode && (
               <div>
-                <label className="text-[10px] text-slate-500 block mb-1 font-bold">{isRtl ? 'التصنيف' : 'Category'}</label>
+                <label className="text-[10px] text-slate-500 block mb-1 font-bold">{t('category')}</label>
                 <select
                   value={prodCategory}
                   onChange={e => setProdCategory(e.target.value)}
@@ -2202,56 +2263,56 @@ export const ERP: React.FC = () => {
                 >
                   {businessType === 'restaurant' && (
                     <>
-                      <option value="meal">{isRtl ? 'وجبة رئيسية' : 'Main Meal'}</option>
-                      <option value="drink">{isRtl ? 'مشروبات وعصائر' : 'Drink / Beverage'}</option>
-                      <option value="dessert">{isRtl ? 'حلويات' : 'Dessert'}</option>
-                      <option value="addition">{isRtl ? 'إضافات' : 'Additions'}</option>
-                      <option value="size">{isRtl ? 'أحجام' : 'Sizes'}</option>
-                      <option value="table">{isRtl ? 'طاولات' : 'Tables'}</option>
-                      <option value="kitchen">{isRtl ? 'مطبخ' : 'Kitchen'}</option>
-                      <option value="item">{isRtl ? 'أصناف' : 'Items'}</option>
-                      <option value="raw_material">{isRtl ? 'مواد خام للمطبخ' : 'Kitchen Raw Material'}</option>
+                      <option value="meal">{t('main_meal')}</option>
+                      <option value="drink">{t('drink_beverage')}</option>
+                      <option value="dessert">{t('dessert')}</option>
+                      <option value="addition">{t('additions')}</option>
+                      <option value="size">{t('sizes')}</option>
+                      <option value="table">{t('tables')}</option>
+                      <option value="kitchen">{t('kitchen')}</option>
+                      <option value="item">{t('items')}</option>
+                      <option value="raw_material">{t('kitchen_raw_material')}</option>
                     </>
                   )}
                   {businessType === 'supermarket' && (
                     <>
-                      <option value="food">{isRtl ? 'مواد غذائية' : 'Food Items'}</option>
-                      <option value="cleaner">{isRtl ? 'منظفات' : 'Cleaning Agents'}</option>
-                      <option value="drink">{isRtl ? 'مشروبات' : 'Drinks'}</option>
-                      <option value="frozen">{isRtl ? 'مجمدات' : 'Frozen Foods'}</option>
-                      <option value="bakery">{isRtl ? 'مخبوزات' : 'Bakery'}</option>
-                      <option value="vegetable">{isRtl ? 'خضروات' : 'Vegetables'}</option>
-                      <option value="fruit">{isRtl ? 'فواكه' : 'Fruits'}</option>
+                      <option value="food">{t('food_items')}</option>
+                      <option value="cleaner">{t('cleaning_agents')}</option>
+                      <option value="drink">{t('drinks')}</option>
+                      <option value="frozen">{t('frozen_foods')}</option>
+                      <option value="bakery">{t('bakery')}</option>
+                      <option value="vegetable">{t('vegetables')}</option>
+                      <option value="fruit">{t('fruits')}</option>
                     </>
                   )}
                   {businessType === 'pharmacy' && (
                     <>
-                      <option value="medicine">{isRtl ? 'أدوية' : 'Medicines'}</option>
-                      <option value="supplement">{isRtl ? 'مكملات' : 'Supplements'}</option>
-                      <option value="cosmetic">{isRtl ? 'مستحضرات تجميل' : 'Cosmetics'}</option>
-                      <option value="medical_device">{isRtl ? 'أجهزة طبية' : 'Medical Devices'}</option>
-                      <option value="prescription">{isRtl ? 'وصفات' : 'Prescriptions'}</option>
-                      <option value="pharma_company">{isRtl ? 'شركات دواء' : 'Pharma Companies'}</option>
+                      <option value="medicine">{t('medicines')}</option>
+                      <option value="supplement">{t('supplements')}</option>
+                      <option value="cosmetic">{t('cosmetics')}</option>
+                      <option value="medical_device">{t('medical_devices')}</option>
+                      <option value="prescription">{t('prescriptions')}</option>
+                      <option value="pharma_company">{t('pharma_companies')}</option>
                     </>
                   )}
                   {businessType === 'clothing' && (
                     <>
-                      <option value="men">{isRtl ? 'رجالي' : 'Men\'s Wear'}</option>
-                      <option value="women">{isRtl ? 'نسائي' : 'Women\'s Wear'}</option>
-                      <option value="kids">{isRtl ? 'أطفال' : 'Kids\' Wear'}</option>
-                      <option value="shoes">{isRtl ? 'أحذية' : 'Shoes'}</option>
-                      <option value="bags">{isRtl ? 'حقائب' : 'Bags'}</option>
-                      <option value="size">{isRtl ? 'مقاسات' : 'Sizes'}</option>
-                      <option value="color">{isRtl ? 'ألوان' : 'Colors'}</option>
+                      <option value="men">{t('mens_wear')}</option>
+                      <option value="women">{t('womens_wear')}</option>
+                      <option value="kids">{t('kids_wear')}</option>
+                      <option value="shoes">{t('shoes')}</option>
+                      <option value="bags">{t('bags')}</option>
+                      <option value="size">{t('sizes')}</option>
+                      <option value="color">{t('colors')}</option>
                     </>
                   )}
                   {businessType === 'electronics' && (
                     <>
-                      <option value="mobile">{isRtl ? 'موبايلات' : 'Mobiles'}</option>
-                      <option value="computer">{isRtl ? 'كمبيوتر' : 'Computers'}</option>
-                      <option value="accessory">{isRtl ? 'إكسسوارات' : 'Accessories'}</option>
-                      <option value="printer">{isRtl ? 'طابعات' : 'Printers'}</option>
-                      <option value="screen">{isRtl ? 'شاشات' : 'Screens'}</option>
+                      <option value="mobile">{t('mobiles')}</option>
+                      <option value="computer">{t('computers')}</option>
+                      <option value="accessory">{t('accessories')}</option>
+                      <option value="printer">{t('printers')}</option>
+                      <option value="screen">{t('screens')}</option>
                     </>
                   )}
                 </select>
@@ -2277,16 +2338,27 @@ export const ERP: React.FC = () => {
             <div className="flex gap-2 justify-end pt-2 border-t">
               <button
                 type="button"
-                onClick={() => setShowAddProdModal(false)}
+                onClick={() => {
+                  setShowAddProdModal(false);
+                  setEditingProdId(null);
+                  setProdNameEn('');
+                  setProdNameAr('');
+                  setProdSku('');
+                  setProdBarcode('');
+                  setProdPrice(0);
+                  setProdCost(0);
+                  setIsPhar(false);
+                  setProdImageBase64('');
+                }}
                 className="px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold"
               >
-                {isRtl ? 'إلغاء' : 'Cancel'}
+                {t('cancel')}
               </button>
               <button
                 type="submit"
                 className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-sm"
               >
-                {isRtl ? 'حفظ المنتج ➜' : 'Save Product ➜'}
+                {t('save_product')}
               </button>
             </div>
           </form>

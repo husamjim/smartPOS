@@ -6,6 +6,8 @@ import arTranslation from './locales/ar.json';
 import frTranslation from './locales/fr.json';
 import deTranslation from './locales/de.json';
 import zhTranslation from './locales/zh.json';
+import esTranslation from './locales/es.json';
+import trTranslation from './locales/tr.json';
 
 i18n
   .use(LanguageDetector)
@@ -16,7 +18,9 @@ i18n
       ar: arTranslation,
       fr: frTranslation,
       de: deTranslation,
-      zh: zhTranslation
+      zh: zhTranslation,
+      es: esTranslation,
+      tr: trTranslation
     },
     fallbackLng: 'ar',
     interpolation: {

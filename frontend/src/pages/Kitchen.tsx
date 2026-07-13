@@ -126,7 +126,7 @@ export const Kitchen: React.FC = () => {
         <div className="flex items-center space-x-3 space-x-reverse">
           <ChefHat className="h-8 w-8 text-orange-100 animate-bounce" />
           <div>
-            <h2 className="text-xl font-bold font-sans">{isRtl ? 'شاشة عرض المطبخ KDS' : 'Kitchen Display Screen (KDS)'}</h2>
+            <h2 className="text-xl font-bold font-sans">{t('kitchen_display_screen_kds')}</h2>
             <p className="text-xs text-orange-150">تجهيز الأطباق والطلبات الداخلية والتوصيل بالتوقيت والملاحظات.</p>
           </div>
         </div>
@@ -134,7 +134,7 @@ export const Kitchen: React.FC = () => {
           onClick={loadKitchenOrders}
           className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-semibold transition-all"
         >
-          {isRtl ? 'تحديث التذاكر' : 'Refresh Tickets'}
+          {t('refresh_tickets')}
         </button>
       </div>
 
@@ -144,7 +144,7 @@ export const Kitchen: React.FC = () => {
         <div className="glass-card p-4 rounded-2xl flex flex-col space-y-4">
           <h3 className="font-bold text-sm text-red-500 flex items-center gap-1.5 pb-2 border-b border-slate-200 dark:border-slate-800">
             <AlertCircle className="h-4 w-4" />
-            {isRtl ? 'بانتظار التحضير' : 'Pending Preparation'} 
+            {t('pending_preparation')} 
             <span className="ml-auto bg-red-500/10 px-2 py-0.5 rounded text-xs">
               {orders.filter(o => o.status === 'pending').length}
             </span>
@@ -176,13 +176,13 @@ export const Kitchen: React.FC = () => {
                 <div className="flex justify-between items-center pt-2 border-t border-slate-200/50 dark:border-slate-800/50 text-[10px] text-slate-400">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-red-500" />
-                    {o.elapsed} {isRtl ? 'دقيقة مضت' : 'm ago'}
+                    {o.elapsed} {t('m_ago')}
                   </span>
                   <button
                     onClick={() => handleUpdateStatus(o.id, 'preparing')}
                     className="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded font-bold transition-all"
                   >
-                    {isRtl ? 'بدء التحضير' : 'Cook'}
+                    {t('cook')}
                   </button>
                 </div>
               </div>
@@ -194,7 +194,7 @@ export const Kitchen: React.FC = () => {
         <div className="glass-card p-4 rounded-2xl flex flex-col space-y-4">
           <h3 className="font-bold text-sm text-blue-500 flex items-center gap-1.5 pb-2 border-b border-slate-200 dark:border-slate-800">
             <Flame className="h-4 w-4 animate-pulse" />
-            {isRtl ? 'قيد التحضير والتجهيز' : 'In Preparation'} 
+            {t('in_preparation')} 
             <span className="ml-auto bg-blue-500/10 px-2 py-0.5 rounded text-xs">
               {orders.filter(o => o.status === 'preparing').length}
             </span>
@@ -226,13 +226,13 @@ export const Kitchen: React.FC = () => {
                 <div className="flex justify-between items-center pt-2 border-t border-slate-200/50 dark:border-slate-800/50 text-[10px] text-slate-400">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-blue-500 animate-spin" style={{ animationDuration: '6s' }} />
-                    {o.elapsed} {isRtl ? 'دقيقة مضت' : 'm ago'}
+                    {o.elapsed} {t('m_ago')}
                   </span>
                   <button
                     onClick={() => handleUpdateStatus(o.id, 'ready')}
                     className="px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded font-bold transition-all"
                   >
-                    {isRtl ? 'جاهز للتسليم' : 'Ready'}
+                    {t('ready')}
                   </button>
                 </div>
               </div>
@@ -244,7 +244,7 @@ export const Kitchen: React.FC = () => {
         <div className="glass-card p-4 rounded-2xl flex flex-col space-y-4">
           <h3 className="font-bold text-sm text-green-500 flex items-center gap-1.5 pb-2 border-b border-slate-200 dark:border-slate-800">
             <CheckCircle className="h-4 w-4" />
-            {isRtl ? 'طلبات جاهزة للتسليم' : 'Ready for Pickup'} 
+            {t('ready_for_pickup')} 
             <span className="ml-auto bg-green-500/10 px-2 py-0.5 rounded text-xs">
               {orders.filter(o => o.status === 'ready').length}
             </span>
@@ -280,7 +280,7 @@ export const Kitchen: React.FC = () => {
                     onClick={() => handleUpdateStatus(o.id, 'served')}
                     className="px-2.5 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-bold transition-all shadow-sm"
                   >
-                    {isRtl ? 'تم التسليم / الخدمة' : 'Serve'}
+                    {t('serve')}
                   </button>
                 </div>
               </div>

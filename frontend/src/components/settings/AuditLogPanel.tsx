@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
 import { db } from '../../db/localDb';
 import { Download, Trash2 } from 'lucide-react';
 
 export const AuditLogPanel: React.FC = () => {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -95,14 +97,14 @@ export const AuditLogPanel: React.FC = () => {
   });
 
   return (
-    <div className="space-y-4 text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="space-y-4 text-right" dir={t('ltr')}>
       {/* Filters Bar */}
       <div className="glass-card p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 grid grid-cols-1 md:grid-cols-5 gap-3 text-xs font-semibold">
         {/* Search */}
         <div className="relative">
           <input 
             type="text" 
-            placeholder={isRtl ? '🔍 بحث في التفاصيل...' : '🔍 Search logs...'}
+            placeholder={t('search_logs')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full px-3 py-2 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none"
@@ -113,7 +115,7 @@ export const AuditLogPanel: React.FC = () => {
         <div>
           <input 
             type="text" 
-            placeholder={isRtl ? '👤 اسم المستخدم' : '👤 Username'}
+            placeholder={t('username')}
             value={userFilter}
             onChange={e => setUserFilter(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none"
@@ -127,7 +129,7 @@ export const AuditLogPanel: React.FC = () => {
             onChange={e => setActionFilter(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none text-[11px]"
           >
-            <option value="">{isRtl ? '— كل العمليات —' : '— All Actions —'}</option>
+            <option value="">{t('all_actions')}</option>
             <option value="LOGIN">LOGIN</option>
             <option value="LOGOUT">LOGOUT</option>
             <option value="CREATE_INVOICE">CREATE_INVOICE</option>
@@ -149,10 +151,10 @@ export const AuditLogPanel: React.FC = () => {
             onChange={e => setResultFilter(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none"
           >
-            <option value="">{isRtl ? '— النتيجة —' : '— Result —'}</option>
-            <option value="success">{isRtl ? 'نجاح' : 'Success'}</option>
-            <option value="failure">{isRtl ? 'أخفق' : 'Failure'}</option>
-            <option value="warning">{isRtl ? 'تحذير' : 'Warning'}</option>
+            <option value="">{t('result')}</option>
+            <option value="success">{t('success')}</option>
+            <option value="failure">{t('failure')}</option>
+            <option value="warning">{t('warning')}</option>
           </select>
         </div>
 
@@ -163,12 +165,12 @@ export const AuditLogPanel: React.FC = () => {
             className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1"
           >
             <Download className="h-4 w-4" />
-            {isRtl ? 'تصدير CSV' : 'Export CSV'}
+            {t('export_csv')}
           </button>
           <button 
             onClick={clearLogs}
             className="p-2 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-500 transition-all"
-            title={isRtl ? 'حذف كافة السجلات' : 'Delete all logs'}
+            title={t('delete_all_logs')}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -180,25 +182,25 @@ export const AuditLogPanel: React.FC = () => {
         {loading ? (
           <div className="text-center py-10 text-slate-400">
             <div className="animate-spin text-xl">⟳</div>
-            <p className="text-xs font-bold mt-2">{isRtl ? 'جاري تحميل سجلات الأنشطة...' : 'Loading audit logs...'}</p>
+            <p className="text-xs font-bold mt-2">{t('loading_audit_logs')}</p>
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="text-center py-10 text-slate-400 text-xs font-bold space-y-1">
             <div>🔍</div>
-            <p>{isRtl ? 'لم يتم العثور على أي نشاط مطابق للمرشحات.' : 'No matching audit activities logged.'}</p>
+            <p>{t('no_matching_audit_activities_logged')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto text-[11px] font-semibold">
-            <table className="w-full text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+            <table className="w-full text-right" dir={t('ltr')}>
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-850">
-                  <th className="py-2 text-slate-400">{isRtl ? 'التاريخ والوقت' : 'Timestamp'}</th>
-                  <th className="py-2 text-slate-400">{isRtl ? 'المستخدم' : 'User'}</th>
-                  <th className="py-2 text-slate-400">{isRtl ? 'العملية' : 'Action'}</th>
-                  <th className="py-2 text-slate-400">{isRtl ? 'التفاصيل' : 'Details'}</th>
-                  <th className="py-2 text-slate-400">{isRtl ? 'الفرع' : 'Branch'}</th>
-                  <th className="py-2 text-slate-400">{isRtl ? 'الحالة' : 'Result'}</th>
-                  <th className="py-2 text-slate-400">{isRtl ? 'الجهاز' : 'Device'}</th>
+                  <th className="py-2 text-slate-400">{t('timestamp')}</th>
+                  <th className="py-2 text-slate-400">{t('user')}</th>
+                  <th className="py-2 text-slate-400">{t('action')}</th>
+                  <th className="py-2 text-slate-400">{t('details')}</th>
+                  <th className="py-2 text-slate-400">{t('branch')}</th>
+                  <th className="py-2 text-slate-400">{t('result_1')}</th>
+                  <th className="py-2 text-slate-400">{t('device')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-900">

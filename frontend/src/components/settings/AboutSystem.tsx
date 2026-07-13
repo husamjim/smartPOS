@@ -1,12 +1,12 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { Info, Copy, Check, Award, ShieldCheck } from 'lucide-react';
 import { AuditLogger } from '../../utils/auditLogger';
 import { telemetry } from '../../utils/telemetry';
 
 export const AboutSystem: React.FC = () => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-
-  const isRtl = document.documentElement.dir === 'rtl';
 
   const specs = {
     name: 'smart POS',
@@ -14,11 +14,11 @@ export const AboutSystem: React.FC = () => {
     build: '20260709.1',
     date: '2026-07-09',
     database: 'IndexedDB (Dexie Transactions v5)',
-    licenseType: isRtl ? 'ترخيص تجاري مدى الحياة' : 'Lifetime Commercial Enterprise License',
+    licenseType: t('lifetime_commercial_enterprise_license'),
     licenseKey: 'SP-7839-8291-RC101',
-    licenseStatus: isRtl ? 'نشط بالكامل وموثق' : 'Fully Activated & Verified',
+    licenseStatus: t('fully_activated_verified'),
     developer: 'smartPOS INC & Google DeepMind Team',
-    copyright: `© ${new Date().getFullYear()} smart POS. ${isRtl ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}`
+    copyright: `© ${new Date().getFullYear()} smart POS. ${t('all_rights_reserved')}`
   };
 
   const libraries = [
@@ -52,22 +52,22 @@ Copyright: ${specs.copyright}
   };
 
   return (
-    <div className="space-y-6 text-right font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 text-right font-sans" dir={t('ltr')}>
       {/* Specs Panel */}
       <div className="glass-card p-6 rounded-3xl border border-slate-200/40 dark:border-slate-800/40 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-4">
           <div className="flex items-center gap-2 border-b pb-2">
             <Info className="h-5 w-5 text-indigo-500" />
-            <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-200">{isRtl ? 'مواصفات وإصدار النظام' : 'System Specifications'}</h4>
+            <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-200">{t('system_specifications')}</h4>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
             {[
-              { label: isRtl ? 'اسم المنتج' : 'Product Name', val: specs.name },
-              { label: isRtl ? 'الإصدار المعتمد' : 'Version', val: specs.version },
-              { label: isRtl ? 'رقم البناء' : 'Build Number', val: specs.build },
-              { label: isRtl ? 'تاريخ الإطلاق' : 'Release Date', val: specs.date },
-              { label: isRtl ? 'محرك قاعدة البيانات' : 'Database engine', val: specs.database },
+              { label: t('product_name'), val: specs.name },
+              { label: t('version'), val: specs.version },
+              { label: t('build_number'), val: specs.build },
+              { label: t('release_date'), val: specs.date },
+              { label: t('database_engine'), val: specs.database },
             ].map(spec => (
               <div key={spec.label} className="space-y-1">
                 <span className="text-[10px] text-slate-400 block">{spec.label}</span>
@@ -82,20 +82,20 @@ Copyright: ${specs.copyright}
           <div className="space-y-3">
             <h5 className="font-bold text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 justify-start">
               <Award className="h-4 w-4" />
-              {isRtl ? 'تفاصيل الترخيص التجاري' : 'Commercial License'}
+              {t('commercial_license')}
             </h5>
             
             <div className="space-y-2 text-[11px] font-semibold text-slate-500">
               <div className="flex justify-between">
-                <span>{isRtl ? 'نوع الترخيص:' : 'Type:'}</span>
+                <span>{t('type')}</span>
                 <span className="font-bold text-slate-700 dark:text-slate-200">{specs.licenseType}</span>
               </div>
               <div className="flex justify-between">
-                <span>{isRtl ? 'المفتاح:' : 'Serial Key:'}</span>
+                <span>{t('serial_key')}</span>
                 <span className="font-bold font-mono text-slate-700 dark:text-slate-200">{specs.licenseKey}</span>
               </div>
               <div className="flex justify-between">
-                <span>{isRtl ? 'الحالة:' : 'Status:'}</span>
+                <span>{t('status')}</span>
                 <span className="font-bold text-emerald-500">{specs.licenseStatus}</span>
               </div>
             </div>
@@ -106,7 +106,7 @@ Copyright: ${specs.copyright}
             className="w-full py-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-500 font-bold text-xs hover:bg-indigo-500/10 transition-all flex items-center justify-center gap-1.5"
           >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? (isRtl ? 'تم النسخ!' : 'Copied!') : (isRtl ? 'نسخ مواصفات النظام' : 'Copy System Info')}
+            {copied ? (t('copied')) : (t('copy_system_info'))}
           </button>
         </div>
       </div>
@@ -115,7 +115,7 @@ Copyright: ${specs.copyright}
       <div className="glass-card p-5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 space-y-4">
         <h4 className="font-bold text-xs text-slate-400 border-b pb-2 flex items-center gap-1.5 justify-start">
           <ShieldCheck className="h-4 w-4 text-indigo-500" />
-          {isRtl ? 'المكتبات البرمجية مفتوحة المصدر' : 'Core libraries registry'}
+          {t('core_libraries_registry')}
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
@@ -133,62 +133,62 @@ Copyright: ${specs.copyright}
         <div className="flex items-center gap-2 border-b pb-2">
           <Info className="h-5 w-5 text-emerald-500" />
           <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-200">
-            {isRtl ? 'تشخيصات سرعة الإقلاع (Startup Profile)' : 'Startup Speed Diagnostics'}
+            {t('startup_speed_diagnostics')}
           </h4>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-semibold">
           <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
-            <span className="text-[10px] text-slate-400 block">{isRtl ? 'إقلاع محرك Electron' : 'Electron Started'}</span>
+            <span className="text-[10px] text-slate-400 block">{t('electron_started')}</span>
             <span className="text-lg font-black font-mono text-blue-500">{telemetry.getTimeline().electronReady}ms</span>
             <p className="text-[9px] text-slate-450 leading-relaxed">
-              {isRtl ? 'زمن تشغيل كود Main Process وتهيئة الملحقات.' : 'Main process boot and context initialization.'}
+              {t('main_process_boot_and_context_initialization')}
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
-            <span className="text-[10px] text-slate-400 block">{isRtl ? 'إنشاء النافذة الرسومية' : 'Window Creation'}</span>
+            <span className="text-[10px] text-slate-400 block">{t('window_creation')}</span>
             <span className="text-lg font-black font-mono text-cyan-500">{telemetry.getTimeline().windowCreation}ms</span>
             <p className="text-[9px] text-slate-450 leading-relaxed">
-              {isRtl ? 'زمن تهيئة نافذة Chromium وفك حزمة الأصول.' : 'Chromium BrowserWindow instantiation.'}
+              {t('chromium_browserwindow_instantiation')}
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
-            <span className="text-[10px] text-slate-400 block">{isRtl ? 'تهيئة قاعدة البيانات' : 'Database Initialization'}</span>
+            <span className="text-[10px] text-slate-400 block">{t('database_initialization')}</span>
             <span className="text-lg font-black font-mono text-emerald-500">{telemetry.getTimeline().dbInit}ms</span>
             <p className="text-[9px] text-slate-450 leading-relaxed">
-              {isRtl ? 'زمن فتح قاعدة بيانات IndexedDB والتحقق من الهجرة.' : 'IndexedDB connection and migration check.'}
+              {t('indexeddb_connection_and_migration_check')}
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
-            <span className="text-[10px] text-slate-400 block">{isRtl ? 'تحميل بيئة React' : 'React Bootstrap'}</span>
+            <span className="text-[10px] text-slate-400 block">{t('react_bootstrap')}</span>
             <span className="text-lg font-black font-mono text-purple-500">{telemetry.getTimeline().reactLoad}ms</span>
             <p className="text-[9px] text-slate-450 leading-relaxed">
-              {isRtl ? 'زمن فك تشغيل الكود المصدري وتجميع المكونات.' : 'Mounting virtual DOM and resolving assets.'}
+              {t('mounting_virtual_dom_and_resolving_assets')}
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
-            <span className="text-[10px] text-slate-400 block">{isRtl ? 'رسم واجهة الدخول' : 'First Interactive'}</span>
+            <span className="text-[10px] text-slate-400 block">{t('first_interactive')}</span>
             <span className="text-lg font-black font-mono text-indigo-500">{telemetry.getTimeline().loginRender}ms</span>
             <p className="text-[9px] text-slate-450 leading-relaxed">
-              {isRtl ? 'زمن فك تشفير شاشة الدخول وتجهيز المدخلات.' : 'Drawing login inputs and styling layers.'}
+              {t('drawing_login_inputs_and_styling_layers')}
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 space-y-2">
-            <span className="text-[10px] text-slate-400 block">{isRtl ? 'تحميل لوحة التحكم المالي' : 'Dashboard Load'}</span>
-            <span className="text-lg font-black font-mono text-amber-500">{isRtl ? 'في الخلفية' : 'Background'}</span>
+            <span className="text-[10px] text-slate-400 block">{t('dashboard_load')}</span>
+            <span className="text-lg font-black font-mono text-amber-500">{t('background')}</span>
             <p className="text-[9px] text-slate-450 leading-relaxed">
-              {isRtl ? 'مؤجل بالكامل ليعمل في الخلفية (Lazy) دون تعطيل الإقلاع.' : 'Fully deferred to load lazily after first paint.'}
+              {t('fully_deferred_to_load_lazily_after_first_paint')}
             </p>
           </div>
         </div>
 
         <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex justify-between items-center">
-          <span>{isRtl ? '🚀 إجمالي زمن الإقلاع الحقيقي (Native Boot Time):' : '🚀 Total Native Boot Time:'}</span>
+          <span>{t('total_native_boot_time')}</span>
           <span className="font-mono text-sm font-black">{telemetry.getTimeline().totalBoot}ms</span>
         </div>
       </div>
@@ -196,7 +196,7 @@ Copyright: ${specs.copyright}
       {/* Copyright */}
       <div className="text-center text-[10px] text-slate-400">
         <p>{specs.copyright}</p>
-        <p className="mt-1">{isRtl ? 'مرخص بموجب اتفاقية استخدام smartPOS التجارية.' : 'Licensed under corporate smartPOS utilization agreements.'}</p>
+        <p className="mt-1">{t('licensed_under_corporate_smartpos_utilization_agreements')}</p>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useRef } from 'react';
 import { Palette, Image, Type, Globe } from 'lucide-react';
 import { AuditLogger } from '../../utils/auditLogger';
@@ -21,6 +22,7 @@ export interface BrandConfig {
 }
 
 export const BrandSettings: React.FC = () => {
+  const { t } = useTranslation();
   const [config, setConfig] = useState<BrandConfig>(() => {
     try {
       const saved = localStorage.getItem('pos_brand_config');
@@ -37,8 +39,8 @@ export const BrandSettings: React.FC = () => {
       colorSidebar: '#ffffff',
       colorHeader: '#ffffff',
       colorInvoice: '#3b82f6',
-      defaultLang: 'ar',
-      currency: 'SAR',
+      defaultLang: 'en',
+      currency: 'USD',
       dateFormat: 'YYYY-MM-DD',
       timeFormat: '12h',
       defaultFont: 'Inter'
@@ -46,8 +48,6 @@ export const BrandSettings: React.FC = () => {
   });
 
   const [savedMsg, setSavedMsg] = useState('');
-
-  const isRtl = document.documentElement.dir === 'rtl';
 
   const logoSysRef = useRef<HTMLInputElement>(null);
   const logoInvRef = useRef<HTMLInputElement>(null);
@@ -85,22 +85,22 @@ export const BrandSettings: React.FC = () => {
 
     AuditLogger.log('CHANGE_SETTINGS', 'brand', 'Updated branding settings and custom styles', 'success');
 
-    setSavedMsg(isRtl ? '✓ تم الحفظ وتطبيق السمات الحيوية!' : '✓ Theme updated and saved!');
+    setSavedMsg(t('theme_updated_and_saved'));
     setTimeout(() => setSavedMsg(''), 3000);
   };
 
   return (
-    <div className="space-y-6 text-right font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 text-right font-sans" dir={t('ltr')}>
       {/* Brand Identity */}
       <div className="glass-card p-5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 space-y-4">
         <h4 className="font-bold text-xs text-indigo-500 uppercase tracking-wider flex items-center gap-1.5 justify-start">
           <Type className="h-4 w-4" />
-          {isRtl ? 'اسم النظام والهوية التجارية' : 'Company & System Names'}
+          {t('company_system_names')}
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
           <div>
-            <label className="text-slate-400 block mb-1.5">{isRtl ? 'اسم النظام' : 'System Name'}</label>
+            <label className="text-slate-400 block mb-1.5">{t('system_name')}</label>
             <input 
               type="text" 
               value="smart POS"
@@ -109,7 +109,7 @@ export const BrandSettings: React.FC = () => {
             />
           </div>
           <div>
-            <label className="text-slate-400 block mb-1.5">{isRtl ? 'اسم الشركة المالكة' : 'Company / Merchant Name'}</label>
+            <label className="text-slate-400 block mb-1.5">{t('company_merchant_name')}</label>
             <input 
               type="text" 
               value={config.companyName}
@@ -124,16 +124,16 @@ export const BrandSettings: React.FC = () => {
       <div className="glass-card p-5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 space-y-4">
         <h4 className="font-bold text-xs text-indigo-500 uppercase tracking-wider flex items-center gap-1.5 justify-start">
           <Palette className="h-4 w-4" />
-          {isRtl ? 'ألوان الواجهات وحزمة السمات' : 'System theme colors overrides'}
+          {t('system_theme_colors_overrides')}
         </h4>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs font-semibold">
           {[
-            { label: isRtl ? 'اللون الأساسي' : 'Primary color', key: 'colorPrimary' },
-            { label: isRtl ? 'لون الأزرار' : 'Buttons color', key: 'colorButton' },
-            { label: isRtl ? 'خلفية القائمة' : 'Sidebar BG', key: 'colorSidebar' },
-            { label: isRtl ? 'خلفية الهيدر' : 'Header BG', key: 'colorHeader' },
-            { label: isRtl ? 'لون الفواتير' : 'Invoice accent', key: 'colorInvoice' },
+            { label: t('primary_color'), key: 'colorPrimary' },
+            { label: t('buttons_color'), key: 'colorButton' },
+            { label: t('sidebar_bg'), key: 'colorSidebar' },
+            { label: t('header_bg'), key: 'colorHeader' },
+            { label: t('invoice_accent'), key: 'colorInvoice' },
           ].map(color => (
             <div key={color.key} className="flex flex-col items-center gap-1.5 bg-slate-500/5 p-3 rounded-2xl border border-slate-200/20">
               <label className="text-[10px] text-slate-400 block">{color.label}</label>
@@ -153,14 +153,14 @@ export const BrandSettings: React.FC = () => {
       <div className="glass-card p-5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 space-y-4">
         <h4 className="font-bold text-xs text-indigo-500 uppercase tracking-wider flex items-center gap-1.5 justify-start">
           <Image className="h-4 w-4" />
-          {isRtl ? 'شعارات الواجهات والمطبوعات' : 'Logo upload registry'}
+          {t('logo_upload_registry')}
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-semibold">
           {[
-            { label: isRtl ? 'شعار النظام الجانبي' : 'Sidebar main logo', key: 'logoSystem', ref: logoSysRef },
-            { label: isRtl ? 'شعار الفواتير الحرارية' : 'Receipt invoice logo', key: 'logoInvoice', ref: logoInvRef },
-            { label: isRtl ? 'شعار شاشة تسجيل الدخول' : 'Login screen logo', key: 'logoLogin', ref: logoLogRef },
+            { label: t('sidebar_main_logo'), key: 'logoSystem', ref: logoSysRef },
+            { label: t('receipt_invoice_logo'), key: 'logoInvoice', ref: logoInvRef },
+            { label: t('login_screen_logo'), key: 'logoLogin', ref: logoLogRef },
           ].map(logo => (
             <div key={logo.key} className="flex flex-col items-center p-4 bg-slate-500/5 border border-slate-200/20 rounded-2xl gap-3">
               <span className="text-[10px] text-slate-400 font-bold">{logo.label}</span>
@@ -177,7 +177,7 @@ export const BrandSettings: React.FC = () => {
                 onClick={() => logo.ref.current?.click()}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-bold"
               >
-                {isRtl ? 'رفع الشعار' : 'Choose logo'}
+                {t('choose_logo')}
               </button>
             </div>
           ))}
@@ -188,12 +188,12 @@ export const BrandSettings: React.FC = () => {
       <div className="glass-card p-5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 space-y-4">
         <h4 className="font-bold text-xs text-indigo-500 uppercase tracking-wider flex items-center gap-1.5 justify-start">
           <Globe className="h-4 w-4" />
-          {isRtl ? 'اللغة والعملة وتنسيق المطبوعات' : 'Regional settings configuration'}
+          {t('regional_settings_configuration')}
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
           <div>
-            <label className="text-slate-400 block mb-1.5">{isRtl ? 'الخط الافتراضي للنظام' : 'System Default Font'}</label>
+            <label className="text-slate-400 block mb-1.5">{t('system_default_font')}</label>
             <select 
               value={config.defaultFont}
               onChange={e => setConfig(prev => ({ ...prev, defaultFont: e.target.value }))}
@@ -207,7 +207,7 @@ export const BrandSettings: React.FC = () => {
           </div>
           
           <div>
-            <label className="text-slate-400 block mb-1.5">{isRtl ? 'العملة الافتراضية للبيع' : 'Base Currency Symbol'}</label>
+            <label className="text-slate-400 block mb-1.5">{t('base_currency_symbol')}</label>
             <input 
               type="text" 
               value={config.currency}
@@ -217,7 +217,7 @@ export const BrandSettings: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1.5">{isRtl ? 'تنسيق التاريخ' : 'Date Format'}</label>
+            <label className="text-slate-400 block mb-1.5">{t('date_format')}</label>
             <select 
               value={config.dateFormat}
               onChange={e => setConfig(prev => ({ ...prev, dateFormat: e.target.value }))}
@@ -230,14 +230,14 @@ export const BrandSettings: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1.5">{isRtl ? 'تنسيق الوقت' : 'Time Format'}</label>
+            <label className="text-slate-400 block mb-1.5">{t('time_format')}</label>
             <select 
               value={config.timeFormat}
               onChange={e => setConfig(prev => ({ ...prev, timeFormat: e.target.value }))}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 focus:outline-none"
             >
-              <option value="12h">{isRtl ? '12 ساعة (ص/م)' : '12-Hour (AM/PM)'}</option>
-              <option value="24h">{isRtl ? '24 ساعة' : '24-Hour clock'}</option>
+              <option value="12h">{t('12_hour_ampm')}</option>
+              <option value="24h">{t('24_hour_clock')}</option>
             </select>
           </div>
         </div>
@@ -253,7 +253,7 @@ export const BrandSettings: React.FC = () => {
         onClick={handleSave}
         className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md"
       >
-        {isRtl ? '💾 حفظ وتطبيق سمات الهوية التجارية' : '💾 Save & Apply Branding Styles'}
+        {t('save_apply_branding_styles')}
       </button>
     </div>
   );

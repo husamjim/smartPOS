@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { db } from '../db/localDb';
 import type { LocalProduct, LocalBatch, LocalCustomer, LocalOrder, LocalOrderItem, LocalRefund } from '../db/localDb';
 import { HardwareService } from '../services/hardware';
+import { AuditLogger } from '../utils/auditLogger';
 
 export const POS: React.FC = () => {
   const { t } = useTranslation();
@@ -66,7 +67,8 @@ export const POS: React.FC = () => {
     const saved = localStorage.getItem('pos_restaurant_tables');
     return saved ? JSON.parse(saved) : ['Table 1', 'Table 2', 'Table 3', 'Table 4', 'Table 5', 'Table 6'];
   });
-  const [targetCurrency, setTargetCurrency] = useState<'SAR' | 'USD'>('SAR');
+  const [targetCurrency, setTargetCurrency] = useState<string>(currency || 'USD');
+  useEffect(() => { setTargetCurrency(currency || 'USD'); }, [currency]);
   const [customsTariff] = useState(5);
 
   // Clothing card variant local isolations & tag print modals
@@ -334,7 +336,7 @@ export const POS: React.FC = () => {
         qty = mockScaleWeight;
         alert(isRtl ? `تم جلب الوزن تلقائياً من الميزان الإلكتروني المحاكي: ${qty} كجم.` : `Fetched weight from virtual scale: ${qty} kg.`);
       } else {
-        const inputWeight = prompt(isRtl ? 'أدخل وزن المنتج بالكيلوجرام (البيع بالوزن):' : 'Enter product weight in kg (by Weight):', '1.0');
+        const inputWeight = prompt(t('enter_product_weight_in_kg_by_weight'), '1.0');
         if (!inputWeight) return;
         qty = parseFloat(inputWeight) || 1;
       }
@@ -454,44 +456,44 @@ export const POS: React.FC = () => {
   };
 
   const getCategoryLabel = (cat: string) => {
-    if (cat === 'ALL') return isRtl ? 'الكل' : 'All';
+    if (cat === 'ALL') return t('all');
     switch (cat) {
       // Restaurant
-      case 'meal': return isRtl ? 'وجبات' : 'Meals';
-      case 'drink': return isRtl ? 'مشروبات' : 'Drinks';
-      case 'dessert': return isRtl ? 'حلويات' : 'Desserts';
-      case 'addition': return isRtl ? 'إضافات' : 'Additions';
-      case 'size': return isRtl ? 'أحجام' : 'Sizes';
-      case 'table': return isRtl ? 'طاولات' : 'Tables';
-      case 'kitchen': return isRtl ? 'مطبخ' : 'Kitchen';
-      case 'item': return isRtl ? 'أصناف' : 'Items';
+      case 'meal': return t('meals');
+      case 'drink': return t('drinks');
+      case 'dessert': return t('desserts');
+      case 'addition': return t('additions');
+      case 'size': return t('sizes');
+      case 'table': return t('tables');
+      case 'kitchen': return t('kitchen');
+      case 'item': return t('items');
       // Supermarket
-      case 'food': return isRtl ? 'مواد غذائية' : 'Food Items';
-      case 'cleaner': return isRtl ? 'منظفات' : 'Cleaning Agents';
-      case 'frozen': return isRtl ? 'مجمدات' : 'Frozen Foods';
-      case 'bakery': return isRtl ? 'مخبوزات' : 'Bakery';
-      case 'vegetable': return isRtl ? 'خضروات' : 'Vegetables';
-      case 'fruit': return isRtl ? 'فواكه' : 'Fruits';
+      case 'food': return t('food_items');
+      case 'cleaner': return t('cleaning_agents');
+      case 'frozen': return t('frozen_foods');
+      case 'bakery': return t('bakery');
+      case 'vegetable': return t('vegetables');
+      case 'fruit': return t('fruits');
       // Pharmacy
-      case 'medicine': return isRtl ? 'أدوية' : 'Medicines';
-      case 'supplement': return isRtl ? 'مكملات' : 'Supplements';
-      case 'cosmetic': return isRtl ? 'مستحضرات تجميل' : 'Cosmetics';
-      case 'medical_device': return isRtl ? 'أجهزة طبية' : 'Medical Devices';
-      case 'prescription': return isRtl ? 'وصفات' : 'Prescriptions';
-      case 'pharma_company': return isRtl ? 'شركات دواء' : 'Pharma Companies';
+      case 'medicine': return t('medicines');
+      case 'supplement': return t('supplements');
+      case 'cosmetic': return t('cosmetics');
+      case 'medical_device': return t('medical_devices');
+      case 'prescription': return t('prescriptions');
+      case 'pharma_company': return t('pharma_companies');
       // Clothing
-      case 'men': return isRtl ? 'رجالي' : 'Men\'s Wear';
-      case 'women': return isRtl ? 'نسائي' : 'Women\'s Wear';
-      case 'kids': return isRtl ? 'أطفال' : 'Kids\' Wear';
-      case 'shoes': return isRtl ? 'أحذية' : 'Shoes';
-      case 'bags': return isRtl ? 'حقائب' : 'Bags';
-      case 'color': return isRtl ? 'ألوان' : 'Colors';
+      case 'men': return t('mens_wear');
+      case 'women': return t('womens_wear');
+      case 'kids': return t('kids_wear');
+      case 'shoes': return t('shoes');
+      case 'bags': return t('bags');
+      case 'color': return t('colors');
       // Electronics
-      case 'mobile': return isRtl ? 'موبايلات' : 'Mobiles';
-      case 'computer': return isRtl ? 'كمبيوتر' : 'Computers';
-      case 'accessory': return isRtl ? 'إكسسوارات' : 'Accessories';
-      case 'printer': return isRtl ? 'طابعات' : 'Printers';
-      case 'screen': return isRtl ? 'شاشات' : 'Screens';
+      case 'mobile': return t('mobiles');
+      case 'computer': return t('computers');
+      case 'accessory': return t('accessories');
+      case 'printer': return t('printers');
+      case 'screen': return t('screens');
       default: return cat;
     }
   };
@@ -594,7 +596,7 @@ export const POS: React.FC = () => {
     const orders = await db.orders.toArray();
     const found = orders.find(o => o.invoice_number === refundInvoiceSearch.trim() && o.status === 'completed');
     if (!found) {
-      alert(isRtl ? 'لم يتم العثور على فاتورة بهذا الرقم أو هي مرجعة مسبقاً.' : 'Invoice not found or already returned.');
+      alert(t('invoice_not_found_or_already_returned'));
       return;
     }
     setRefundFoundOrder(found);
@@ -617,7 +619,7 @@ export const POS: React.FC = () => {
     try {
       const selectedList = refundOrderItems.filter(item => refundSelectedItems[item.id]?.selected);
       if (selectedList.length === 0) {
-        alert(isRtl ? 'الرجاء تحديد عناصر للإرجاع.' : 'Please select items to refund.');
+        alert(t('please_select_items_to_refund'));
         setRefundLoading(false);
         return;
       }
@@ -661,6 +663,14 @@ export const POS: React.FC = () => {
         user_id: currentUser?.id || 'unknown'
       };
       await db.refunds.add(refundRecord);
+
+      AuditLogger.log(
+        'REFUND',
+        'orders',
+        `Processed refund for invoice: ${refundFoundOrder.invoice_number}. Refund total: ${(refundTotal + refundTax).toFixed(2)} ${currency}. Reason: ${refundReason}`,
+        'warning',
+        refundOrderId
+      );
 
       setRefundSuccess(true);
       setRefundFoundOrder(null);
@@ -706,8 +716,8 @@ export const POS: React.FC = () => {
         {activeShift ? (
           <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold">
             <span className="text-emerald-600 dark:text-emerald-400">
-              🟢 {isRtl ? 'الوردية مفتوحة منذ' : 'Shift open since'}: {new Date(activeShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &nbsp;|&nbsp;
-              {isRtl ? 'رصيد البداية:' : 'Start Cash:'} <span className="font-sans">{activeShift.startCash.toFixed(2)} {currency}</span>
+              🟢 {t('shift_open_since')}: {new Date(activeShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &nbsp;|&nbsp;
+              {t('start_cash')} <span className="font-sans">{activeShift.startCash.toFixed(2)} {currency}</span>
               {currentUser && <span className="mx-2 text-emerald-500">| 👤 {currentUser.displayName}</span>}
             </span>
             <button
@@ -715,20 +725,20 @@ export const POS: React.FC = () => {
               onClick={() => setShowCloseShiftModal(true)}
               className="px-3 py-1 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold transition-all"
             >
-              🔒 {isRtl ? 'إغلاق الوردية' : 'Close Shift'}
+              🔒 {t('close_shift')}
             </button>
           </div>
         ) : (
           <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-bold">
             <span className="text-amber-600 dark:text-amber-400">
-              🟡 {isRtl ? 'لا توجد وردية مفتوحة حالياً — قم بفتح وردية للبدء' : 'No active shift — open a shift to begin selling'}
+              🟡 {t('no_active_shift_open_a_shift_to_begin_selling')}
             </span>
             <button
               type="button"
               onClick={() => setShowOpenShiftModal(true)}
               className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold transition-all"
             >
-              🟢 {isRtl ? 'فتح الوردية' : 'Open Shift'}
+              🟢 {t('open_shift')}
             </button>
           </div>
         )}
@@ -740,7 +750,7 @@ export const POS: React.FC = () => {
           <div className="glass-card p-5 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 flex-1 flex flex-col justify-between space-y-4 animate-fade-in">
             <div>
               <div className="flex justify-between items-center border-b pb-3 mb-2">
-                <span className="font-extrabold text-sm flex items-center gap-1">🚢 {isRtl ? 'فاتورة شحن الجملة والاستيراد (Spreadsheet)' : 'Wholesale Bulk Order Spreadsheet'}</span>
+                <span className="font-extrabold text-sm flex items-center gap-1">🚢 {t('wholesale_bulk_order_spreadsheet')}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -751,7 +761,7 @@ export const POS: React.FC = () => {
                   }}
                   className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[10px] flex items-center gap-1 shadow-sm font-sans"
                 >
-                  + {isRtl ? 'إضافة سطر فاتورة' : 'Add Item Line'}
+                  + {t('add_item_line')}
                 </button>
               </div>
 
@@ -759,14 +769,14 @@ export const POS: React.FC = () => {
                 <table className="w-full text-[10px] text-right">
                   <thead>
                     <tr className="border-b text-slate-400 font-extrabold">
-                      <th className="py-2 pr-1">{isRtl ? 'المنتج / الصنف' : 'Product/SKU'}</th>
-                      <th>{isRtl ? 'وحدة الشحن' : 'Shipping Unit'}</th>
-                      <th>{isRtl ? 'الكمية' : 'Qty'}</th>
-                      <th>{isRtl ? 'الجمارك %' : 'Customs %'}</th>
-                      <th>{isRtl ? 'السعر (USD)' : 'Price (USD)'}</th>
-                      <th>{isRtl ? 'السعر (SAR)' : 'Price (SAR)'}</th>
-                      <th>{isRtl ? 'التكلفة' : 'Unit Cost'}</th>
-                      <th className="text-left">{isRtl ? 'الهامش' : 'GP %'}</th>
+                      <th className="py-2 pr-1">{t('productsku')}</th>
+                      <th>{t('shipping_unit')}</th>
+                      <th>{t('qty')}</th>
+                      <th>{t('customs_1')}</th>
+                      <th>{t('price_usd')}</th>
+                      <th>{isRtl ? `السعر (${currency})` : `Price (${currency})`}</th>
+                      <th>{t('unit_cost')}</th>
+                      <th className="text-left">{t('gp')}</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -778,9 +788,9 @@ export const POS: React.FC = () => {
                       
                       const priceUsd = targetCurrency === 'USD' ? basePrice / 3.75 : basePrice;
                       const tariffAdjustedPriceUsd = priceUsd * (1 + row.tariff / 100);
-                      const priceSar = targetCurrency === 'USD' ? basePrice * (1 + row.tariff / 100) : basePrice * (1 + row.tariff / 100);
+                      const priceLocal = targetCurrency === 'USD' ? basePrice * (1 + row.tariff / 100) : basePrice * (1 + row.tariff / 100);
                       
-                      const gpMargin = priceSar > 0 ? ((priceSar - costVal) / priceSar) * 100 : 0;
+                      const gpMargin = priceLocal > 0 ? ((priceLocal - costVal) / priceLocal) * 100 : 0;
 
                       return (
                         <tr key={row.id} className="border-b border-slate-100 dark:border-slate-800/40 py-2">
@@ -809,9 +819,9 @@ export const POS: React.FC = () => {
                               }}
                               className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded px-1.5 py-1 text-[10px] focus:outline-none"
                             >
-                              <option value="carton">{isRtl ? 'كرتون (Carton)' : 'Carton'}</option>
-                              <option value="palette">{isRtl ? 'طبلية (Palette)' : 'Palette'}</option>
-                              <option value="container">{isRtl ? 'حاوية (Container)' : 'Container'}</option>
+                              <option value="carton">{t('carton')}</option>
+                              <option value="palette">{t('palette')}</option>
+                              <option value="container">{t('container')}</option>
                             </select>
                           </td>
                           <td>
@@ -842,7 +852,7 @@ export const POS: React.FC = () => {
                             />
                           </td>
                           <td className="font-sans text-slate-500">${tariffAdjustedPriceUsd.toFixed(2)}</td>
-                          <td className="font-sans font-bold text-indigo-500">{priceSar.toFixed(2)} SAR</td>
+                          <td className="font-sans font-bold text-indigo-500">{priceLocal.toFixed(2)} {currency}</td>
                           <td className="font-sans text-slate-400">{costVal.toFixed(2)}</td>
                           <td className="text-left">
                             <span className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${gpMargin > 20 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
@@ -870,27 +880,27 @@ export const POS: React.FC = () => {
 
             {/* Wholesale conversion & tariff quick controls */}
             {(() => {
-              const { totalWeight, totalCustomsFeeSar, gpMargin } = calculateWholesaleTotals();
+              const { totalWeight, totalCustomsFeeSar: totalCustomsFeeLocal, gpMargin } = calculateWholesaleTotals();
               return (
                 <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/30 text-xs flex flex-col sm:flex-row justify-between items-center gap-4">
                   {/* Stats block */}
                   <div className="flex gap-4 items-center flex-wrap text-[10px] font-bold">
                     <span className="text-slate-400">
-                      {isRtl ? 'إجمالي الوزن:' : 'Total Weight:'} <span className="text-indigo-500 font-sans">{totalWeight.toFixed(2)} Tons</span>
+                      {t('total_weight')} <span className="text-indigo-500 font-sans">{totalWeight.toFixed(2)} Tons</span>
                     </span>
                     <span className="text-slate-400">
-                      {isRtl ? 'إجمالي الجمارك:' : 'Total Customs:'} <span className="text-red-500 font-sans">{totalCustomsFeeSar.toFixed(2)} SAR</span>
+                      {t('total_customs')} <span className="text-red-500 font-sans">{totalCustomsFeeLocal.toFixed(2)} {currency}</span>
                     </span>
                     <span className="text-slate-400">
-                      {isRtl ? 'هامش ربح الشحنة الكلي:' : 'Total GP Margin:'} <span className={`font-sans px-1.5 py-0.5 rounded ${gpMargin > 20 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{gpMargin.toFixed(1)}%</span>
+                      {t('total_gp_margin')} <span className={`font-sans px-1.5 py-0.5 rounded ${gpMargin > 20 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{gpMargin.toFixed(1)}%</span>
                     </span>
                   </div>
 
                   <div className="flex gap-4 font-bold items-center shrink-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-400 font-semibold">{isRtl ? 'العملة:' : 'Currency:'}</span>
+                      <span className="text-slate-400 font-semibold">{t('currency')}</span>
                       <div className="flex bg-slate-250 dark:bg-slate-950 p-1 rounded-lg">
-                        {(['SAR', 'USD'] as const).map(curr => (
+                        {([currency || 'USD', 'USD'] as const).map(curr => (
                           <button
                             key={curr}
                             type="button"
@@ -914,14 +924,14 @@ export const POS: React.FC = () => {
             {/* Left Column: Categories and Fast Items */}
             <div className="glass-card p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 flex flex-col space-y-3">
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="font-extrabold text-xs">{isRtl ? 'سلع البيع السريع (سوبرماركت)' : 'Fast-Selling Items'}</span>
+                <span className="font-extrabold text-xs">{t('fast_selling_items')}</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setShowPriceChecker(true)}
                     className="px-2.5 py-1 rounded bg-blue-600/10 text-blue-500 hover:bg-blue-600/20 font-bold text-[9px] flex items-center gap-1 font-sans"
                   >
-                    {isRtl ? 'فاحص الأسعار' : 'Price Checker'}
+                    {t('price_checker')}
                   </button>
                 </div>
               </div>
@@ -946,11 +956,11 @@ export const POS: React.FC = () => {
               <div className="space-y-3">
                 {/* Barcode scanner input simulating typing */}
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 block font-bold">📷 {isRtl ? 'الماسح الضوئي للباركود:' : 'Barcode Scanner Input:'}</label>
+                  <label className="text-[10px] text-slate-400 block font-bold">📷 {t('barcode_scanner_input')}</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder={isRtl ? "اكتب باركود صنف واضغط Enter..." : "Type barcode & press Enter..."}
+                      placeholder={t('type_barcode_press_enter')}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
                           handleBarcodeScanSim((e.target as HTMLInputElement).value);
@@ -964,7 +974,7 @@ export const POS: React.FC = () => {
 
                 {/* Numpad configuration for quick quantities */}
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 block font-bold">🔢 {isRtl ? 'تحديد ضرب الكمية المضافة:' : 'Set Multiplier Qty:'}</label>
+                  <label className="text-[10px] text-slate-400 block font-bold">🔢 {t('set_multiplier_qty')}</label>
                   <div className="flex gap-2 items-center bg-slate-100/50 dark:bg-slate-950/50 p-2 rounded-xl border border-slate-200 dark:border-slate-850">
                     <button type="button" onClick={() => setNumpadQty(prev => Math.max(1, prev - 1))} className="h-6 w-6 rounded bg-slate-250 dark:bg-slate-800 font-bold flex items-center justify-center">-</button>
                     <span className="font-bold font-sans text-xs text-blue-500 px-2">{numpadQty}</span>
@@ -980,19 +990,19 @@ export const POS: React.FC = () => {
 
               {/* Quick Discount tools */}
               <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/30">
-                <span className="text-[10px] text-slate-500 font-bold block mb-1.5">{isRtl ? 'خصم مبيعات السوبرماركت السريع:' : 'Supermarket Quick Discount:'}</span>
+                <span className="text-[10px] text-slate-500 font-bold block mb-1.5">{t('supermarket_quick_discount')}</span>
                 <div className="grid grid-cols-3 gap-1.5 text-center font-bold text-[9px] font-sans">
-                  <button type="button" onClick={() => applyCoupon('SAVE10')} className="py-2 rounded bg-indigo-650/10 text-indigo-500 hover:bg-indigo-600/20">🏷️ {isRtl ? 'خصم 10%' : '10% OFF'}</button>
-                  <button type="button" onClick={() => applyCoupon('EID20')} className="py-2 rounded bg-indigo-655/10 text-indigo-500 hover:bg-indigo-600/20">🏷️ {isRtl ? 'خصم 20%' : '20% OFF'}</button>
+                  <button type="button" onClick={() => applyCoupon('SAVE10')} className="py-2 rounded bg-indigo-650/10 text-indigo-500 hover:bg-indigo-600/20">🏷️ {t('10_off')}</button>
+                  <button type="button" onClick={() => applyCoupon('EID20')} className="py-2 rounded bg-indigo-655/10 text-indigo-500 hover:bg-indigo-600/20">🏷️ {t('20_off')}</button>
                   <button
                     type="button"
                     onClick={() => {
-                      const customDisc = prompt(isRtl ? 'أدخل كود خصم مخصص:' : 'Enter custom coupon code:');
+                      const customDisc = prompt(t('enter_custom_coupon_code'));
                       if (customDisc) applyCoupon(customDisc);
                     }}
                     className="py-2 rounded bg-slate-250 dark:bg-slate-800 hover:bg-slate-300 dark:text-white"
                   >
-                    {isRtl ? 'تطبيق كوبون' : 'Apply Code'}
+                    {t('apply_code')}
                   </button>
                 </div>
               </div>
@@ -1004,14 +1014,14 @@ export const POS: React.FC = () => {
           <div className="flex-1 flex flex-col space-y-4 animate-fade-in">
             {/* Header toggles */}
             <div className="flex justify-between items-center bg-white/40 dark:bg-slate-900/40 p-3 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-              <span className="font-extrabold text-xs flex items-center gap-1.5">{isRtl ? 'واجهة بوتيك ومعرض الملابس والملحقات:' : 'Fashion Clothing Boutique Terminal:'}</span>
+              <span className="font-extrabold text-xs flex items-center gap-1.5">{t('fashion_clothing_boutique_terminal')}</span>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowManageVariantsModal(true)}
                   className="px-2.5 py-1.5 rounded-xl bg-teal-650/10 text-teal-500 hover:bg-teal-600/20 font-bold text-[10px] flex items-center gap-1 font-sans"
                 >
-                  {isRtl ? 'إدارة المقاسات والألوان' : 'Sizes & Colors'}
+                  {t('sizes_colors')}
                 </button>
                 {/* Price Checker Trigger Button */}
                 <button
@@ -1019,7 +1029,7 @@ export const POS: React.FC = () => {
                   onClick={() => setShowPriceChecker(true)}
                   className="px-2.5 py-1.5 rounded-xl bg-blue-600/10 text-blue-500 hover:bg-blue-600/20 font-bold text-[10px] flex items-center gap-1 font-sans"
                 >
-                  {isRtl ? 'فاحص الأسعار' : 'Price Checker'}
+                  {t('price_checker')}
                 </button>
               </div>
             </div>
@@ -1045,7 +1055,7 @@ export const POS: React.FC = () => {
                         }}
                         className="p-1.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 text-[9px] font-bold font-sans"
                       >
-                        🏷️ {isRtl ? 'طباعة ملصق' : 'Print Tag'}
+                        🏷️ {t('print_tag')}
                       </button>
                     </div>
 
@@ -1054,7 +1064,7 @@ export const POS: React.FC = () => {
                       <div className="flex gap-4 font-bold text-[10px]">
                         {/* Size pills */}
                         <div className="flex items-center gap-1">
-                          <span className="text-slate-400 font-semibold">{isRtl ? 'مقاس:' : 'Size:'}</span>
+                          <span className="text-slate-400 font-semibold">{t('size')}</span>
                           <div className="flex bg-slate-100 dark:bg-slate-950 rounded p-0.5 border">
                             {availableSizes.map(sz => (
                               <button
@@ -1078,7 +1088,7 @@ export const POS: React.FC = () => {
 
                       {/* Colors select */}
                       <div className="flex items-center gap-1 text-[10px]">
-                        <span className="text-slate-400 font-semibold">{isRtl ? 'لون:' : 'Color:'}</span>
+                        <span className="text-slate-400 font-semibold">{t('color')}</span>
                         <select
                           value={variant.color}
                           onChange={e => {
@@ -1115,7 +1125,7 @@ export const POS: React.FC = () => {
                         }}
                         className="px-3 py-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-[9px] transition-all shadow-xs"
                       >
-                        + {isRtl ? 'إضافة للسلة' : 'Add to Cart'}
+                        + {t('add_to_cart')}
                       </button>
                     </div>
                   </div>
@@ -1132,14 +1142,14 @@ export const POS: React.FC = () => {
             {businessType === 'restaurant' && (
               <div className="p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 space-y-3 animate-fade-in">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-extrabold flex items-center gap-1">🍽️ {isRtl ? 'إدارة طاولات المطعم:' : 'Table Floorplan:'} {activeTable ? <span className="text-blue-500 font-sans">{activeTable}</span> : <span className="text-slate-400">{isRtl ? 'لم يتم تحديد طاولة' : 'No Table Selected'}</span>}</span>
+                  <span className="font-extrabold flex items-center gap-1">🍽️ {t('table_floorplan')} {activeTable ? <span className="text-blue-500 font-sans">{activeTable}</span> : <span className="text-slate-400">{t('no_table_selected')}</span>}</span>
                   <div className="flex gap-1.5 font-bold text-[10px]">
                     <button
                       type="button"
                       onClick={() => setShowManageTablesModal(true)}
                       className="px-2 py-1 rounded bg-teal-600/10 text-teal-500 hover:bg-teal-650/20"
                     >
-                      🛠️ {isRtl ? 'إدارة الطاولات' : 'Manage Tables'}
+                      🛠️ {t('manage_tables')}
                     </button>
                     <button
                       type="button"
@@ -1153,7 +1163,7 @@ export const POS: React.FC = () => {
                       }}
                       className="px-2 py-1 rounded bg-blue-600/10 text-blue-500 hover:bg-blue-600/20"
                     >
-                      {isRtl ? 'دمج الطاولات' : 'Merge Tables'}
+                      {t('merge_tables')}
                     </button>
                     <button
                       type="button"
@@ -1162,19 +1172,19 @@ export const POS: React.FC = () => {
                       }}
                       className="px-2 py-1 rounded bg-red-600/10 text-red-500 hover:bg-red-600/20"
                     >
-                      {isRtl ? 'تقسيم الطاولة' : 'Split Table'}
+                      {t('split_table')}
                     </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-6 gap-2">
-                  {tables.map(t => {
-                    const isSelected = activeTable === t;
-                    const hasOpenInvoice = suspendedList.some(o => o.table_number === t);
+                  {tables.map(tbl => {
+                    const isSelected = activeTable === tbl;
+                    const hasOpenInvoice = suspendedList.some(o => o.table_number === tbl);
                     return (
                       <button
-                        key={t}
+                        key={tbl}
                         type="button"
-                        onClick={() => setActiveTable(isSelected ? null : t)}
+                        onClick={() => setActiveTable(isSelected ? null : tbl)}
                         className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border flex flex-col items-center justify-center gap-0.5 ${
                           isSelected
                             ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
@@ -1183,10 +1193,10 @@ export const POS: React.FC = () => {
                               : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100'
                         }`}
                       >
-                        <span>{t.replace('Table ', isRtl ? 'طاولة ' : 'T ')}</span>
+                        <span>{tbl.replace('Table ', t('t'))}</span>
                         {hasOpenInvoice && (
                           <span className={`text-[8px] font-medium ${isSelected ? 'text-blue-200' : 'text-amber-500'}`}>
-                            ({isRtl ? 'مشغولة' : 'Occupied'})
+                            ({t('occupied')})
                           </span>
                         )}
                       </button>
@@ -1242,7 +1252,7 @@ export const POS: React.FC = () => {
             {/* Scale weight indicator */}
             {devices.scale && (
               <div className="p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-955 text-xs flex justify-between items-center gap-4 animate-fade-in shadow-xs">
-                <span className="font-bold">⚖️ {isRtl ? 'الميزان الإلكتروني النشط:' : 'Electronic Scale Weight:'}</span>
+                <span className="font-bold">⚖️ {t('electronic_scale_weight')}</span>
                 {import.meta.env.DEV && (
                   <input
                     type="range"
@@ -1312,7 +1322,7 @@ export const POS: React.FC = () => {
                     <div className="flex justify-between items-end pt-2 border-t border-slate-100 dark:border-slate-850">
                       <span className="font-bold text-xs font-sans text-blue-500 dark:text-blue-400">{p.price.toFixed(2)} <span className="text-[9px] font-normal">{currency}</span></span>
                       <span className={`text-[9px] font-bold ${hasLowStock ? 'text-amber-500' : 'text-slate-400'}`}>
-                        {p.type === 'weight' ? (isRtl ? 'بيع بالوزن' : 'by Weight') : `${isRtl ? 'المخزون:' : 'Stock:'} ${p.stock !== undefined ? p.stock : 8}`}
+                        {p.type === 'weight' ? (t('by_weight')) : `${t('stock_1')} ${p.stock !== undefined ? p.stock : 8}`}
                       </span>
                     </div>
                   </div>
@@ -1338,7 +1348,7 @@ export const POS: React.FC = () => {
               }}
               className="bg-transparent font-bold focus:outline-none w-full truncate"
             >
-              <option value="">-- {isRtl ? 'اختر عميل ولاء' : 'Select Customer'} --</option>
+              <option value="">-- {t('select_customer')} --</option>
               {customers.map(c => (
                 <option key={c.id} value={c.id}>{c.name} ({c.tier})</option>
               ))}
@@ -1357,7 +1367,7 @@ export const POS: React.FC = () => {
                 }}
                 className="px-2 py-1 rounded bg-amber-500/10 text-amber-500 font-bold border-none text-[10px] focus:outline-none cursor-pointer"
               >
-                <option value="">📥 {isRtl ? 'المعلقة' : 'Suspended'} ({suspendedList.length})</option>
+                <option value="">📥 {t('suspended')} ({suspendedList.length})</option>
                 {suspendedList.map(item => (
                   <option key={item.id} value={item.id}>{item.invoice_number} - {item.total} {currency}</option>
                 ))}
@@ -1371,7 +1381,7 @@ export const POS: React.FC = () => {
           {cartItems.length === 0 ? (
             <div className="flex flex-col justify-center items-center h-full text-slate-400 space-y-2">
               <ShoppingCart className="h-10 w-10 stroke-1" />
-              <span className="text-xs">{isRtl ? 'سلة المشتريات فارغة حالياً' : 'Cart is empty'}</span>
+              <span className="text-xs">{t('cart_is_empty')}</span>
             </div>
           ) : (
             cartItems.map(item => (
@@ -1390,21 +1400,21 @@ export const POS: React.FC = () => {
                         }
                       }}
                       className="cursor-pointer hover:underline text-blue-500 hover:text-blue-600 font-sans font-bold"
-                      title={isRtl ? 'اضغط لتعديل سعر الوحدة' : 'Click to override price'}
+                      title={t('click_to_override_price')}
                     >
                       {item.product.price.toFixed(2)} {currency}
                     </span>
                     <span>x</span>
                     <span
                       onClick={() => {
-                        const newQty = prompt(isRtl ? 'تعديل الكمية المطلوبة:' : 'Edit required quantity:', item.quantity.toString());
+                        const newQty = prompt(t('edit_required_quantity'), item.quantity.toString());
                         if (newQty !== null) {
                           const parsed = parseFloat(newQty);
                           if (parsed > 0) updateQuantity(item.product.id, parsed);
                         }
                       }}
                       className="cursor-pointer hover:underline text-indigo-500 hover:text-indigo-600 font-sans font-bold"
-                      title={isRtl ? 'اضغط لتعديل الكمية' : 'Click to edit quantity'}
+                      title={t('click_to_edit_quantity')}
                     >
                       {item.quantity}
                     </span>
@@ -1416,7 +1426,7 @@ export const POS: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        const newDisc = prompt(isRtl ? 'خصم مخصص على هذا الصنف (نسبة مئوية 0-100):' : 'Custom percentage discount for this line item (0-100):', (item.discountPercentage || 0).toString());
+                        const newDisc = prompt(t('custom_percentage_discount_for_this_line_item_0_100'), (item.discountPercentage || 0).toString());
                         if (newDisc !== null) {
                           const parsed = parseFloat(newDisc);
                           if (parsed >= 0 && parsed <= 100) updateCartItemDiscount(item.product.id, parsed);
@@ -1439,7 +1449,7 @@ export const POS: React.FC = () => {
                   </button>
                   <span 
                     onClick={() => {
-                      const newQty = prompt(isRtl ? 'تعديل الكمية المطلوبة:' : 'Edit quantity:', item.quantity.toString());
+                      const newQty = prompt(t('edit_quantity'), item.quantity.toString());
                       if (newQty !== null) {
                         const parsed = parseFloat(newQty);
                         if (parsed > 0) updateQuantity(item.product.id, parsed);
@@ -1531,7 +1541,7 @@ export const POS: React.FC = () => {
               onClick={() => { setShowRefundModal(true); setRefundSuccess(false); setRefundFoundOrder(null); setRefundOrderItems([]); }}
               className="flex-1 py-2 rounded-xl border border-orange-300 dark:border-orange-700 text-orange-500 hover:bg-orange-500/10 transition-all text-xs font-bold"
             >
-              ↩️ {isRtl ? 'إرجاع / استرداد' : 'Refund / Return'}
+              ↩️ {t('refund_return')}
             </button>
             {businessType === 'restaurant' && (
               <button
@@ -1540,7 +1550,7 @@ export const POS: React.FC = () => {
                 disabled={cartItems.length === 0}
                 className="flex-1 py-2 rounded-xl border border-indigo-300 dark:border-indigo-700 text-indigo-500 hover:bg-indigo-500/10 transition-all text-xs font-bold disabled:opacity-40"
               >
-                🔀 {isRtl ? 'تقسيم الفاتورة' : 'Split Bill'}
+                🔀 {t('split_bill')}
               </button>
             )}
           </div>
@@ -1551,9 +1561,9 @@ export const POS: React.FC = () => {
       {showOpenShiftModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 rounded-2xl max-w-sm w-full space-y-4 animate-fade-in">
-            <h3 className="font-bold text-base text-emerald-500 flex items-center gap-2">🟢 {isRtl ? 'فتح وردية جديدة' : 'Open New Shift'}</h3>
+            <h3 className="font-bold text-base text-emerald-500 flex items-center gap-2">🟢 {t('open_new_shift')}</h3>
             <div>
-              <label className="text-xs text-slate-500 font-bold block mb-1">{isRtl ? 'رصيد النقد المبدئي في الصندوق:' : 'Starting Cash in Drawer:'}</label>
+              <label className="text-xs text-slate-500 font-bold block mb-1">{t('starting_cash_in_drawer')}</label>
               <input
                 type="number"
                 min={0}
@@ -1563,16 +1573,16 @@ export const POS: React.FC = () => {
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none text-center font-sans text-lg font-bold"
                 autoFocus
               />
-              <p className="text-[10px] text-slate-400 mt-1">{isRtl ? 'مثال: 500 ريال سعودي في الصندوق' : 'e.g. 500 SAR in drawer'}</p>
+              <p className="text-[10px] text-slate-400 mt-1">{isRtl ? `مثال: 500 ${currency} في الصندوق` : `e.g. 500 ${currency} in drawer`}</p>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowOpenShiftModal(false)}
                 className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">
-                {isRtl ? 'إلغاء' : 'Cancel'}
+                {t('cancel')}
               </button>
               <button type="button" onClick={handleOpenShift}
                 className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm">
-                🟢 {isRtl ? 'فتح الوردية' : 'Open Shift'}
+                🟢 {t('open_shift')}
               </button>
             </div>
           </div>
@@ -1583,25 +1593,25 @@ export const POS: React.FC = () => {
       {showCloseShiftModal && activeShift && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 rounded-2xl max-w-md w-full space-y-4 animate-fade-in">
-            <h3 className="font-bold text-base text-red-500 flex items-center gap-2">🔒 {isRtl ? 'إغلاق الوردية الحالية' : 'Close Current Shift'}</h3>
+            <h3 className="font-bold text-base text-red-500 flex items-center gap-2">🔒 {t('close_current_shift')}</h3>
 
             <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs space-y-1.5 font-semibold">
               <div className="flex justify-between">
-                <span className="text-slate-500">{isRtl ? 'وقت فتح الوردية:' : 'Shift Start:'}</span>
+                <span className="text-slate-500">{t('shift_start')}</span>
                 <span>{new Date(activeShift.startTime).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{isRtl ? 'رصيد البداية:' : 'Start Cash:'}</span>
+                <span className="text-slate-500">{t('start_cash')}</span>
                 <span className="font-sans">{activeShift.startCash.toFixed(2)} {currency}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{isRtl ? 'إجمالي المبيعات (الجلسة الحالية):' : 'Session Sales:'}</span>
+                <span className="text-slate-500">{t('session_sales')}</span>
                 <span className="font-sans text-blue-500">{totalAmount.toFixed(2)} {currency}</span>
               </div>
             </div>
 
             <div>
-              <label className="text-xs text-slate-500 font-bold block mb-1">{isRtl ? 'النقد الفعلي في الصندوق الآن:' : 'Actual Cash in Drawer Now:'}</label>
+              <label className="text-xs text-slate-500 font-bold block mb-1">{t('actual_cash_in_drawer_now')}</label>
               <input
                 type="number"
                 min={0}
@@ -1615,11 +1625,11 @@ export const POS: React.FC = () => {
             {shiftEndCashInput > 0 && (
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border text-xs">
                 <div className="flex justify-between font-semibold">
-                  <span>{isRtl ? 'المبلغ المتوقع في الصندوق:' : 'Expected in Drawer:'}</span>
+                  <span>{t('expected_in_drawer')}</span>
                   <span className="font-sans">{(activeShift.startCash + totalAmount).toFixed(2)} {currency}</span>
                 </div>
                 <div className={`flex justify-between font-bold mt-1 ${shiftEndCashInput - (activeShift.startCash + totalAmount) < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                  <span>{isRtl ? 'الفرق:' : 'Difference:'}</span>
+                  <span>{t('difference')}</span>
                   <span className="font-sans">{(shiftEndCashInput - (activeShift.startCash + totalAmount)).toFixed(2)} {currency}</span>
                 </div>
               </div>
@@ -1628,11 +1638,11 @@ export const POS: React.FC = () => {
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowCloseShiftModal(false)}
                 className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">
-                {isRtl ? 'إلغاء' : 'Cancel'}
+                {t('cancel')}
               </button>
               <button type="button" onClick={handleCloseShift}
                 className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm">
-                🔒 {isRtl ? 'إغلاق وطباعة التقرير' : 'Close & Print Report'}
+                🔒 {t('close_print_report')}
               </button>
             </div>
           </div>
@@ -1643,21 +1653,21 @@ export const POS: React.FC = () => {
       {shiftClosedReport && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl max-w-md w-full space-y-4 text-right shadow-2xl border border-slate-200 dark:border-slate-700">
-            <h3 className="font-bold text-lg text-center text-slate-800 dark:text-white">📋 {isRtl ? 'تقرير إغلاق الوردية' : 'Shift Closure Report'}</h3>
+            <h3 className="font-bold text-lg text-center text-slate-800 dark:text-white">📋 {t('shift_closure_report')}</h3>
             <div className="space-y-2 text-xs font-semibold divide-y divide-slate-100 dark:divide-slate-800">
-              <div className="flex justify-between py-1"><span className="text-slate-500">{isRtl ? 'وقت الفتح:' : 'Opened:'}</span><span>{new Date(shiftClosedReport.startTime).toLocaleString()}</span></div>
-              <div className="flex justify-between py-1"><span className="text-slate-500">{isRtl ? 'وقت الإغلاق:' : 'Closed:'}</span><span>{new Date(shiftClosedReport.endTime).toLocaleString()}</span></div>
-              <div className="flex justify-between py-1"><span className="text-slate-500">{isRtl ? 'إجمالي المبيعات:' : 'Total Sales:'}</span><span className="text-blue-500 font-sans">{shiftClosedReport.totalSales.toFixed(2)} {currency}</span></div>
-              <div className="flex justify-between py-1"><span className="text-slate-500">{isRtl ? 'النقد المتوقع:' : 'Expected Cash:'}</span><span className="font-sans">{(activeShift?.startCash || 0 + shiftClosedReport.totalSales).toFixed(2)} {currency}</span></div>
-              <div className="flex justify-between py-1"><span className="text-slate-500">{isRtl ? 'النقد الفعلي:' : 'Actual Cash:'}</span><span className="font-sans">{shiftClosedReport.endCash.toFixed(2)} {currency}</span></div>
+              <div className="flex justify-between py-1"><span className="text-slate-500">{t('opened')}</span><span>{new Date(shiftClosedReport.startTime).toLocaleString()}</span></div>
+              <div className="flex justify-between py-1"><span className="text-slate-500">{t('closed')}</span><span>{new Date(shiftClosedReport.endTime).toLocaleString()}</span></div>
+              <div className="flex justify-between py-1"><span className="text-slate-500">{t('total_sales')}</span><span className="text-blue-500 font-sans">{shiftClosedReport.totalSales.toFixed(2)} {currency}</span></div>
+              <div className="flex justify-between py-1"><span className="text-slate-500">{t('expected_cash')}</span><span className="font-sans">{(activeShift?.startCash || 0 + shiftClosedReport.totalSales).toFixed(2)} {currency}</span></div>
+              <div className="flex justify-between py-1"><span className="text-slate-500">{t('actual_cash')}</span><span className="font-sans">{shiftClosedReport.endCash.toFixed(2)} {currency}</span></div>
               <div className={`flex justify-between py-1 font-bold ${shiftClosedReport.difference < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                <span>{isRtl ? 'الفرق (عجز/فائض):' : 'Difference:'}</span>
+                <span>{t('difference')}</span>
                 <span className="font-sans">{shiftClosedReport.difference.toFixed(2)} {currency}</span>
               </div>
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => window.print()} className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">🖨️ {isRtl ? 'طباعة التقرير' : 'Print Report'}</button>
-              <button type="button" onClick={() => setShiftClosedReport(null)} className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">{isRtl ? 'إغلاق' : 'Close'}</button>
+              <button type="button" onClick={() => window.print()} className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">🖨️ {t('print_report')}</button>
+              <button type="button" onClick={() => setShiftClosedReport(null)} className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">{t('close')}</button>
             </div>
           </div>
         </div>
@@ -1669,8 +1679,8 @@ export const POS: React.FC = () => {
           <div className="glass-card rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-in">
             <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4 flex justify-between items-center">
               <div>
-                <h3 className="text-white font-bold">↩️ {isRtl ? 'إرجاع / استرداد مبيعات' : 'Sales Refund / Return'}</h3>
-                <p className="text-orange-100 text-[10px]">{isRtl ? 'ابحث عن رقم الفاتورة الأصلية' : 'Search by original invoice number'}</p>
+                <h3 className="text-white font-bold">↩️ {t('sales_refund_return')}</h3>
+                <p className="text-orange-100 text-[10px]">{t('search_by_original_invoice_number')}</p>
               </div>
               <button type="button" onClick={() => setShowRefundModal(false)} className="text-white text-xl">✕</button>
             </div>
@@ -1679,27 +1689,27 @@ export const POS: React.FC = () => {
               {refundSuccess ? (
                 <div className="text-center py-8 space-y-3">
                   <div className="text-5xl">✅</div>
-                  <h4 className="font-bold text-emerald-500 text-base">{isRtl ? 'تم تسجيل الإرجاع بنجاح!' : 'Refund recorded successfully!'}</h4>
-                  <p className="text-xs text-slate-400">{isRtl ? 'تم إنشاء فاتورة إرجاع سالبة وتسجيلها في قاعدة البيانات.' : 'A negative refund order has been created in the database.'}</p>
-                  <button type="button" onClick={() => setShowRefundModal(false)} className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">{isRtl ? 'إغلاق' : 'Close'}</button>
+                  <h4 className="font-bold text-emerald-500 text-base">{t('refund_recorded_successfully')}</h4>
+                  <p className="text-xs text-slate-400">{t('a_negative_refund_order_has_been_created_in_the_database')}</p>
+                  <button type="button" onClick={() => setShowRefundModal(false)} className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">{t('close')}</button>
                 </div>
               ) : (
                 <>
                   {/* Invoice search */}
                   <div>
-                    <label className="text-xs text-slate-500 font-bold block mb-1">{isRtl ? 'رقم الفاتورة الأصلية:' : 'Original Invoice Number:'}</label>
+                    <label className="text-xs text-slate-500 font-bold block mb-1">{t('original_invoice_number')}</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={refundInvoiceSearch}
                         onChange={e => setRefundInvoiceSearch(e.target.value)}
-                        placeholder={isRtl ? 'مثال: INV-20260624-001' : 'e.g. INV-20260624-001'}
+                        placeholder={t('eg_inv_20260624_001')}
                         className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none text-xs font-mono"
                         onKeyDown={e => e.key === 'Enter' && handleRefundSearch()}
                       />
                       <button type="button" onClick={handleRefundSearch}
                         className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs">
-                        {isRtl ? 'بحث' : 'Search'}
+                        {t('search')}
                       </button>
                     </div>
                   </div>
@@ -1709,7 +1719,7 @@ export const POS: React.FC = () => {
                     <div className="space-y-3">
                       <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs">
                         <div className="flex justify-between font-bold">
-                          <span>{isRtl ? 'فاتورة:' : 'Invoice:'} {refundFoundOrder.invoice_number}</span>
+                          <span>{t('invoice')} {refundFoundOrder.invoice_number}</span>
                           <span className="text-blue-500 font-sans">{refundFoundOrder.total.toFixed(2)} {currency}</span>
                         </div>
                         <div className="text-slate-400 mt-0.5">{new Date(refundFoundOrder.created_at).toLocaleString()}</div>
@@ -1739,12 +1749,12 @@ export const POS: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="text-xs text-slate-500 font-bold block mb-1">{isRtl ? 'سبب الإرجاع (اختياري):' : 'Refund Reason (optional):'}</label>
+                        <label className="text-xs text-slate-500 font-bold block mb-1">{t('refund_reason_optional')}</label>
                         <input
                           type="text"
                           value={refundReason}
                           onChange={e => setRefundReason(e.target.value)}
-                          placeholder={isRtl ? 'مثال: منتج تالف، خطأ في الطلب...' : 'e.g. damaged product, wrong order...'}
+                          placeholder={t('eg_damaged_product_wrong_order')}
                           className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none text-xs"
                         />
                       </div>
@@ -1755,7 +1765,7 @@ export const POS: React.FC = () => {
                         disabled={refundLoading}
                         className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-sm disabled:opacity-60"
                       >
-                        {refundLoading ? (isRtl ? 'جارٍ المعالجة...' : 'Processing...') : `✅ ${isRtl ? 'تأكيد الإرجاع' : 'Confirm Refund'}`}
+                        {refundLoading ? (t('processing')) : `✅ ${t('confirm_refund')}`}
                       </button>
                     </div>
                   )}
@@ -1772,8 +1782,8 @@ export const POS: React.FC = () => {
           <div className="glass-card rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-in">
             <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-4 flex justify-between items-center">
               <div>
-                <h3 className="text-white font-bold">🔀 {isRtl ? 'تقسيم الفاتورة' : 'Split Bill'}</h3>
-                <p className="text-indigo-100 text-[10px]">{isRtl ? 'وزّع الأصناف على الأشخاص' : 'Assign items to each person'}</p>
+                <h3 className="text-white font-bold">🔀 {t('split_bill')}</h3>
+                <p className="text-indigo-100 text-[10px]">{t('assign_items_to_each_person')}</p>
               </div>
               <button type="button" onClick={() => setShowSplitBillModal(false)} className="text-white text-xl">✕</button>
             </div>
@@ -1782,14 +1792,14 @@ export const POS: React.FC = () => {
               {splitBillSuccess ? (
                 <div className="text-center py-8 space-y-3">
                   <div className="text-5xl">✅</div>
-                  <h4 className="font-bold text-emerald-500 text-base">{isRtl ? 'تم تقسيم الفاتورة بنجاح!' : 'Bill split successfully!'}</h4>
-                  <p className="text-xs text-slate-400">{isRtl ? 'تم إنشاء طلبات معلقة لكل شخص.' : 'Suspended orders created for each person.'}</p>
+                  <h4 className="font-bold text-emerald-500 text-base">{t('bill_split_successfully')}</h4>
+                  <p className="text-xs text-slate-400">{t('suspended_orders_created_for_each_person')}</p>
                 </div>
               ) : (
                 <>
                   {/* Number of people */}
                   <div>
-                    <label className="text-xs text-slate-500 font-bold block mb-2">{isRtl ? 'عدد الأشخاص:' : 'Number of People:'}</label>
+                    <label className="text-xs text-slate-500 font-bold block mb-2">{t('number_of_people')}</label>
                     <div className="flex gap-2 justify-center">
                       {[2,3,4,5,6,7,8].map(n => (
                         <button
@@ -1806,7 +1816,7 @@ export const POS: React.FC = () => {
 
                   {/* Item assignment */}
                   <div className="space-y-2 max-h-[220px] overflow-y-auto">
-                    <p className="text-[10px] text-slate-400 font-bold">{isRtl ? 'اضغط على الصنف لتعيينه لشخص (الشخص 1 افتراضي):' : 'Click an item to assign to a person (Person 1 is default):'}</p>
+                    <p className="text-[10px] text-slate-400 font-bold">{t('click_an_item_to_assign_to_a_person_person_1_is_default')}</p>
                     {cartItems.map(item => {
                       const assigned = splitAssignments[item.product.id] || 1;
                       return (
@@ -1847,18 +1857,18 @@ export const POS: React.FC = () => {
 
                   {/* Equal split option */}
                   <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 border text-xs text-center">
-                    <span className="text-slate-500 font-bold">{isRtl ? 'تقسيم متساوٍ:' : 'Equal Split:'} </span>
-                    <span className="text-blue-500 font-bold font-sans">{(totalAmount / splitPeople).toFixed(2)} {currency} {isRtl ? 'لكل شخص' : 'per person'}</span>
+                    <span className="text-slate-500 font-bold">{t('equal_split')} </span>
+                    <span className="text-blue-500 font-bold font-sans">{(totalAmount / splitPeople).toFixed(2)} {currency} {t('per_person')}</span>
                   </div>
 
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setShowSplitBillModal(false)}
                       className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">
-                      {isRtl ? 'إلغاء' : 'Cancel'}
+                      {t('cancel')}
                     </button>
                     <button type="button" onClick={handleConfirmSplitBill}
                       className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm">
-                      🔀 {isRtl ? 'إنشاء الفواتير المقسمة' : 'Create Split Bills'}
+                      🔀 {t('create_split_bills')}
                     </button>
                   </div>
                 </>
@@ -1873,7 +1883,7 @@ export const POS: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 rounded-2xl max-w-md w-full space-y-4 animate-fade-in text-right">
             <h3 className="font-bold text-base border-b pb-2">
-              🧬 {isRtl ? 'البدائل الدوائية المتاحة بالمستودع' : 'Drug Substitution Helper'}
+              🧬 {t('drug_substitution_helper')}
             </h3>
             <div className="text-xs">
               <div><b>الدواء المحدد:</b> {substProduct.name_ar}</div>
@@ -1896,7 +1906,7 @@ export const POS: React.FC = () => {
                   >
                     <div>
                       <div className="font-bold">{alt.name_ar}</div>
-                      <div className="text-[10px] text-slate-400">{isRtl ? 'سعر البديل:' : 'Price:'} {alt.price} {currency}</div>
+                      <div className="text-[10px] text-slate-400">{t('price_1')} {alt.price} {currency}</div>
                     </div>
                     <span className="text-emerald-500 font-bold font-sans">اختر البديل ➜</span>
                   </div>
@@ -2006,13 +2016,13 @@ export const POS: React.FC = () => {
               {/* Cash Change Calculator Panel */}
               {(paymentType === 'cash' || paymentType === 'split') && (
                 <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 bg-slate-100/30">
-                  <span className="text-[10px] text-slate-500 font-bold block mb-1">🧮 {isRtl ? 'حاسبة الفكة والنقد المستلم:' : 'Cash Change Calculator:'}</span>
+                  <span className="text-[10px] text-slate-500 font-bold block mb-1">🧮 {t('cash_change_calculator')}</span>
                   
                   <div className="flex gap-2 items-center">
-                    <span className="shrink-0 font-bold">{isRtl ? 'المستلم نقداً:' : 'Cash Received:'}</span>
+                    <span className="shrink-0 font-bold">{t('cash_received')}</span>
                     <input
                       type="number"
-                      placeholder={isRtl ? "مثال: 100" : "e.g. 100"}
+                      placeholder={t('eg_100')}
                       value={cashReceived}
                       onChange={e => {
                         const val = e.target.value === '' ? '' : parseFloat(e.target.value);
@@ -2029,7 +2039,7 @@ export const POS: React.FC = () => {
                       onClick={() => setCashReceived(totalAmount)}
                       className="py-1 rounded bg-slate-250 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-300"
                     >
-                      {isRtl ? 'المبلغ بالضبط' : 'Exact'}
+                      {t('exact')}
                     </button>
                     {[50, 100, 200, 500].map(val => (
                       <button
@@ -2060,20 +2070,20 @@ export const POS: React.FC = () => {
                       onClick={() => setCashReceived('')}
                       className="py-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20"
                     >
-                      {isRtl ? 'مسح' : 'Clear'}
+                      {t('clear')}
                     </button>
                   </div>
 
                   {/* Calculated Change Due display */}
                   {cashReceived !== '' && cashReceived >= totalAmount && (
                     <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center animate-fade-in">
-                      <div className="text-[10px] text-slate-400 font-bold">{isRtl ? 'المتبقي إرجاعه للعميل (الفكة):' : 'Change Due to Customer:'}</div>
+                      <div className="text-[10px] text-slate-400 font-bold">{t('change_due_to_customer')}</div>
                       <div className="text-xl font-bold font-sans text-emerald-500">{(cashReceived - totalAmount).toFixed(2)} {currency}</div>
                     </div>
                   )}
                   {cashReceived !== '' && cashReceived < totalAmount && (
                     <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center text-amber-500 text-[10px] font-bold">
-                      ⚠️ {isRtl ? 'المبلغ المستلم أقل من إجمالي الفاتورة' : 'Amount is less than invoice total'}
+                      ⚠️ {t('amount_is_less_than_invoice_total')}
                     </div>
                   )}
                 </div>
@@ -2106,7 +2116,7 @@ export const POS: React.FC = () => {
           <div className="glass-card p-6 rounded-2xl max-w-sm w-full space-y-4 animate-fade-in text-center flex flex-col items-center">
             <div className="flex justify-between w-full border-b pb-2">
               <span className="text-xs font-bold flex items-center gap-1.5">
-                🏷️ {isRtl ? 'معاينة ملصق باركود صنف الملابس' : 'Clothing Tag Barcode Sticker'}
+                🏷️ {t('clothing_tag_barcode_sticker')}
               </span>
               <button
                 onClick={() => setPrintTagProduct(null)}
@@ -2122,9 +2132,9 @@ export const POS: React.FC = () => {
               <div className="text-center font-bold text-xs truncate">{isRtl ? printTagProduct.product.name_ar : printTagProduct.product.name_en}</div>
               
               <div className="flex justify-around text-[10px] font-bold bg-slate-100 p-1.5 rounded border border-slate-200">
-                <div>{isRtl ? 'المقاس:' : 'SIZE:'} <span className="text-indigo-600">{printTagProduct.size}</span></div>
+                <div>{t('size_1')} <span className="text-indigo-600">{printTagProduct.size}</span></div>
                 <div className="border-l border-slate-300"></div>
-                <div>{isRtl ? 'اللون:' : 'COLOR:'} <span className="text-indigo-600">{isRtl && printTagProduct.color === 'Red' ? 'أحمر' : isRtl && printTagProduct.color === 'Blue' ? 'أزرق' : isRtl && printTagProduct.color === 'Black' ? 'أسود' : printTagProduct.color}</span></div>
+                <div>{t('color_1')} <span className="text-indigo-600">{isRtl && printTagProduct.color === 'Red' ? 'أحمر' : isRtl && printTagProduct.color === 'Blue' ? 'أزرق' : isRtl && printTagProduct.color === 'Black' ? 'أسود' : printTagProduct.color}</span></div>
               </div>
 
               {/* Barcode lines */}
@@ -2144,18 +2154,18 @@ export const POS: React.FC = () => {
             <div className="flex gap-2 justify-end w-full border-t pt-3">
               <button
                 onClick={() => {
-                  alert(isRtl ? 'تمت محاكاة إرسال ملصق الباركود بنجاح إلى طابعة ملصقات زيبرا الموصلة 🖨️' : 'Successfully emulated printing clothing price tag to ZPL label printer 🖨️');
+                  alert(t('successfully_emulated_printing_clothing_price_tag_to_zpl_label_printer'));
                   setPrintTagProduct(null);
                 }}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm flex-1"
               >
-                🖨️ {isRtl ? 'طباعة الملصق' : 'Print Label'}
+                🖨️ {t('print_label')}
               </button>
               <button
                 onClick={() => setPrintTagProduct(null)}
                 className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold"
               >
-                {isRtl ? 'إغلاق' : 'Close'}
+                {t('close')}
               </button>
             </div>
           </div>
@@ -2167,7 +2177,7 @@ export const POS: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 rounded-2xl max-w-md w-full space-y-4 animate-fade-in text-right">
             <h3 className="font-bold text-base border-b pb-2 flex items-center justify-between">
-              <span>🔍 {isRtl ? 'جهاز التحقق السريع من أسعار السلع' : 'Fast Item Price Checker'}</span>
+              <span>🔍 {t('fast_item_price_checker')}</span>
               <button
                 onClick={() => {
                   setShowPriceChecker(false);
@@ -2181,11 +2191,11 @@ export const POS: React.FC = () => {
             </h3>
 
             <div className="space-y-3">
-              <label className="text-[10px] text-slate-400 block font-bold">{isRtl ? 'امسح باركود المنتج أو اكتبه للتحقق:' : 'Scan barcode or type to check price:'}</label>
+              <label className="text-[10px] text-slate-400 block font-bold">{t('scan_barcode_or_type_to_check_price')}</label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={isRtl ? "اكتب باركود منتج واضغط انتر..." : "Type barcode & press Enter..."}
+                  placeholder={t('type_barcode_press_enter')}
                   value={priceCheckBarcode}
                   onChange={e => setPriceCheckBarcode(e.target.value)}
                   onKeyDown={e => {
@@ -2194,7 +2204,7 @@ export const POS: React.FC = () => {
                       if (matched) {
                         setPriceCheckProduct(matched);
                       } else {
-                        alert(isRtl ? 'الباركود غير مطابق لأي منتج.' : 'No item matches this barcode.');
+                        alert(t('no_item_matches_this_barcode'));
                         setPriceCheckProduct(null);
                       }
                     }
@@ -2208,13 +2218,13 @@ export const POS: React.FC = () => {
                     if (matched) {
                       setPriceCheckProduct(matched);
                     } else {
-                      alert(isRtl ? 'الباركود غير مطابق لأي منتج.' : 'No item matches this barcode.');
+                      alert(t('no_item_matches_this_barcode'));
                       setPriceCheckProduct(null);
                     }
                   }}
                   className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold"
                 >
-                  {isRtl ? 'فحص' : 'Check'}
+                  {t('check')}
                 </button>
               </div>
             </div>
@@ -2231,11 +2241,11 @@ export const POS: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-[10px] border-t pt-2 mt-1">
-                  <div><b>{isRtl ? 'رمز السلعة SKU:' : 'SKU:'}</b> <span className="font-mono">{priceCheckProduct.sku}</span></div>
-                  <div><b>{isRtl ? 'الباركود:' : 'Barcode:'}</b> <span className="font-mono">{priceCheckProduct.barcode}</span></div>
-                  <div><b>{isRtl ? 'سعر التكلفة:' : 'Unit Cost:'}</b> <span className="font-sans">{priceCheckProduct.cost.toFixed(2)} {currency}</span></div>
+                  <div><b>{t('sku_1')}</b> <span className="font-mono">{priceCheckProduct.sku}</span></div>
+                  <div><b>{t('barcode_1')}</b> <span className="font-mono">{priceCheckProduct.barcode}</span></div>
+                  <div><b>{t('unit_cost_1')}</b> <span className="font-sans">{priceCheckProduct.cost.toFixed(2)} {currency}</span></div>
                   <div>
-                    <b>{isRtl ? 'المخزون الحالي:' : 'Current Stock:'}</b> 
+                    <b>{t('current_stock')}</b> 
                     <span className={`font-sans font-bold ml-1 ${priceCheckProduct.stock && priceCheckProduct.stock <= priceCheckProduct.min_stock ? 'text-amber-500' : 'text-emerald-500'}`}>
                       {priceCheckProduct.stock !== undefined ? priceCheckProduct.stock : 8} {priceCheckProduct.unit}
                     </span>
@@ -2250,11 +2260,11 @@ export const POS: React.FC = () => {
                       setShowPriceChecker(false);
                       setPriceCheckBarcode('');
                       setPriceCheckProduct(null);
-                      alert(isRtl ? 'تم إضافة المنتج إلى السلة بنجاح.' : 'Added item to checkout cart.');
+                      alert(t('added_item_to_checkout_cart'));
                     }}
                     className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
                   >
-                    🛒 {isRtl ? 'إضافة هذا المنتج لسلة الكاشير' : 'Add Item to Checkout Cart'}
+                    🛒 {t('add_item_to_checkout_cart')}
                   </button>
                 </div>
               </div>
@@ -2271,7 +2281,7 @@ export const POS: React.FC = () => {
                 }}
                 className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold"
               >
-                {isRtl ? 'إغلاق' : 'Close'}
+                {t('close')}
               </button>
             </div>
           </div>
@@ -2282,7 +2292,7 @@ export const POS: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 rounded-2xl max-w-md w-full space-y-4 animate-fade-in text-right">
             <h3 className="font-bold text-base border-b pb-2 flex items-center justify-between">
-              <span>🛠️ {isRtl ? 'إدارة طاولات المطعم' : 'Manage Restaurant Tables'}</span>
+              <span>🛠️ {t('manage_restaurant_tables')}</span>
               <button
                 onClick={() => {
                   setShowManageTablesModal(false);
@@ -2296,12 +2306,12 @@ export const POS: React.FC = () => {
 
             <div className="space-y-3">
               <label className="text-[10px] text-slate-400 block font-bold">
-                {isRtl ? 'إضافة طاولة جديدة:' : 'Add New Table:'}
+                {t('add_new_table')}
               </label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={isRtl ? "مثال: طاولة VIP، طاولة 7" : "e.g. Table 7, VIP Table"}
+                  placeholder={t('eg_table_7_vip_table')}
                   value={newTableName}
                   onChange={e => setNewTableName(e.target.value)}
                   className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-center text-xs focus:outline-none text-slate-800 dark:text-slate-200"
@@ -2312,7 +2322,7 @@ export const POS: React.FC = () => {
                     const name = newTableName.trim();
                     if (!name) return;
                     if (tables.includes(name)) {
-                      alert(isRtl ? 'هذه الطاولة موجودة بالفعل!' : 'Table name already exists!');
+                      alert(t('table_name_already_exists'));
                       return;
                     }
                     setTables(prev => [...prev, name]);
@@ -2320,14 +2330,14 @@ export const POS: React.FC = () => {
                   }}
                   className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold"
                 >
-                  {isRtl ? 'إضافة' : 'Add'}
+                  {t('add')}
                 </button>
               </div>
             </div>
 
             <div className="space-y-2">
               <span className="text-[10px] text-slate-400 font-bold block">
-                {isRtl ? 'الطاولات الحالية (اضغط للحذف):' : 'Current Tables (Click to delete):'}
+                {t('current_tables_click_to_delete')}
               </span>
               <div className="flex gap-2 flex-wrap max-h-[200px] overflow-y-auto p-2 bg-slate-100/50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800">
                 {tables.map(t => (
@@ -2357,7 +2367,7 @@ export const POS: React.FC = () => {
                 }}
                 className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold"
               >
-                {isRtl ? 'إغلاق' : 'Close'}
+                {t('close')}
               </button>
             </div>
           </div>
@@ -2369,7 +2379,7 @@ export const POS: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 rounded-2xl max-w-md w-full space-y-4 animate-fade-in text-right">
             <h3 className="font-bold text-base border-b pb-2 flex items-center justify-between">
-              <span>⚙️ {isRtl ? 'إدارة المقاسات والألوان' : 'Manage Sizes & Colors'}</span>
+              <span>⚙️ {t('manage_sizes_colors')}</span>
               <button
                 onClick={() => {
                   setShowManageVariantsModal(false);
@@ -2385,12 +2395,12 @@ export const POS: React.FC = () => {
             {/* Sizes section */}
             <div className="space-y-3 pb-3 border-b border-slate-200 dark:border-slate-800">
               <label className="text-[10px] text-slate-400 block font-bold">
-                {isRtl ? 'إضافة مقاس جديد:' : 'Add New Size:'}
+                {t('add_new_size')}
               </label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={isRtl ? "مثال: XXL، 42، XS" : "e.g. XXL, 42, XS"}
+                  placeholder={t('eg_xxl_42_xs')}
                   value={newSizeName}
                   onChange={e => setNewSizeName(e.target.value)}
                   className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-950 text-center text-xs focus:outline-none text-slate-800 dark:text-slate-200"
@@ -2401,7 +2411,7 @@ export const POS: React.FC = () => {
                     const sz = newSizeName.trim();
                     if (!sz) return;
                     if (availableSizes.includes(sz)) {
-                      alert(isRtl ? 'هذا المقاس موجود بالفعل!' : 'Size already exists!');
+                      alert(t('size_already_exists'));
                       return;
                     }
                     setAvailableSizes(prev => [...prev, sz]);
@@ -2409,12 +2419,12 @@ export const POS: React.FC = () => {
                   }}
                   className="px-4 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold"
                 >
-                  {isRtl ? 'إضافة' : 'Add'}
+                  {t('add')}
                 </button>
               </div>
 
               <span className="text-[10px] text-slate-400 font-bold block">
-                {isRtl ? 'المقاسات الحالية (اضغط للحذف):' : 'Current Sizes (Click to delete):'}
+                {t('current_sizes_click_to_delete')}
               </span>
               <div className="flex gap-2 flex-wrap max-h-[100px] overflow-y-auto p-2 bg-slate-100/50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800">
                 {availableSizes.map(sz => (
@@ -2438,12 +2448,12 @@ export const POS: React.FC = () => {
             {/* Colors section */}
             <div className="space-y-3">
               <label className="text-[10px] text-slate-400 block font-bold">
-                {isRtl ? 'إضافة لون جديد:' : 'Add New Color:'}
+                {t('add_new_color')}
               </label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={isRtl ? "مثال: Yellow، أصفر" : "e.g. Yellow, White"}
+                  placeholder={t('eg_yellow_white')}
                   value={newColorName}
                   onChange={e => setNewColorName(e.target.value)}
                   className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-855 bg-white dark:bg-slate-955 text-center text-xs focus:outline-none text-slate-800 dark:text-slate-200"
@@ -2454,7 +2464,7 @@ export const POS: React.FC = () => {
                     const col = newColorName.trim();
                     if (!col) return;
                     if (availableColors.includes(col)) {
-                      alert(isRtl ? 'هذا اللون موجود بالفعل!' : 'Color already exists!');
+                      alert(t('color_already_exists'));
                       return;
                     }
                     setAvailableColors(prev => [...prev, col]);
@@ -2462,12 +2472,12 @@ export const POS: React.FC = () => {
                   }}
                   className="px-4 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold"
                 >
-                  {isRtl ? 'إضافة' : 'Add'}
+                  {t('add')}
                 </button>
               </div>
 
               <span className="text-[10px] text-slate-400 font-bold block">
-                {isRtl ? 'الألوان الحالية (اضغط للحذف):' : 'Current Colors (Click to delete):'}
+                {t('current_colors_click_to_delete')}
               </span>
               <div className="flex gap-2 flex-wrap max-h-[100px] overflow-y-auto p-2 bg-slate-100/50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800">
                 {availableColors.map(col => (
@@ -2497,7 +2507,7 @@ export const POS: React.FC = () => {
                 }}
                 className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold"
               >
-                {isRtl ? 'إغلاق' : 'Close'}
+                {t('close')}
               </button>
             </div>
           </div>
@@ -2511,7 +2521,7 @@ export const POS: React.FC = () => {
             {/* Header */}
             <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-orange-100 font-semibold">{isRtl ? 'مواصفات الطلب' : 'Order Modifiers'}</p>
+                <p className="text-[10px] text-orange-100 font-semibold">{t('order_modifiers')}</p>
                 <h3 className="text-white font-bold text-sm">{isRtl ? pendingModifierProduct.name_ar : pendingModifierProduct.name_en}</h3>
               </div>
               <span className="text-2xl">🍽️</span>
@@ -2521,7 +2531,7 @@ export const POS: React.FC = () => {
               {/* Modifier Preset Buttons */}
               <div>
                 <p className="text-[10px] text-slate-400 font-bold mb-2 tracking-wider uppercase">
-                  {isRtl ? 'اضغط لاختيار المواصفات (يمكن تعدد الاختيارات):' : 'Tap to select modifiers (multi-select):'}
+                  {t('tap_to_select_modifiers_multi_select')}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {modifierPresets.map(m => {
@@ -2548,7 +2558,7 @@ export const POS: React.FC = () => {
               {selectedModifiers.length > 0 && (
                 <div className="p-2.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
                   <p className="text-[10px] text-orange-600 dark:text-orange-400 font-bold">
-                    ✅ {isRtl ? 'المحدد:' : 'Selected:'} {selectedModifiers.map(id => {
+                    ✅ {t('selected')} {selectedModifiers.map(id => {
                       const m = modifierPresets.find(p => p.id === id);
                       return isRtl ? m?.ar : m?.en;
                     }).join(' · ')}
@@ -2559,13 +2569,13 @@ export const POS: React.FC = () => {
               {/* Custom free-text note */}
               <div>
                 <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                  {isRtl ? '📝 ملاحظة إضافية (اختياري):' : '📝 Custom note (optional):'}
+                  {t('custom_note_optional')}
                 </label>
                 <input
                   type="text"
                   value={customModifierNote}
                   onChange={e => setCustomModifierNote(e.target.value)}
-                  placeholder={isRtl ? 'مثال: بدون صوص حار، نصف حجم...' : 'e.g. no hot sauce, half portion...'}
+                  placeholder={t('eg_no_hot_sauce_half_portion')}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
               </div>
@@ -2582,7 +2592,7 @@ export const POS: React.FC = () => {
                   }}
                   className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
                 >
-                  {isRtl ? '❌ إلغاء' : '❌ Cancel'}
+                  {t('cancel_1')}
                 </button>
                 <button
                   type="button"
@@ -2596,14 +2606,14 @@ export const POS: React.FC = () => {
                   }}
                   className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
                 >
-                  {isRtl ? '⏭️ بدون مواصفات' : '⏭️ No Modifiers'}
+                  {t('no_modifiers')}
                 </button>
                 <button
                   type="button"
                   onClick={confirmModifiers}
                   className="flex-[2] py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shadow-md transition-all"
                 >
-                  {isRtl ? '✅ إضافة للطلب' : '✅ Add to Order'}
+                  {t('add_to_order')}
                 </button>
               </div>
             </div>

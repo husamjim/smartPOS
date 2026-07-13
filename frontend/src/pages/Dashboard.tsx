@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
 import { DollarSign, ShoppingBag, Users, AlertTriangle, TrendingUp, Landmark, RefreshCw } from 'lucide-react';
 import { db } from '../db/localDb';
+import { useApp } from '../context/AppContext';
 import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -28,6 +30,8 @@ ChartJS.register(
 );
 
 export const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
+  const { currency, branches } = useApp();
   const [stats, setStats] = useState({
     salesToday: 0,
     ordersCount: 0,
@@ -35,7 +39,7 @@ export const Dashboard: React.FC = () => {
     lowStockCount: 0
   });
   const [hourlySales, setHourlySales] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
-  const [branchSales, setBranchSales] = useState<number[]>([0, 0]);
+  const [branchSales, setBranchSales] = useState<number[]>([]);
   const [criticalItems, setCriticalItems] = useState<any[]>([]);
 
   useEffect(() => {
@@ -51,7 +55,7 @@ export const Dashboard: React.FC = () => {
 
     // Dynamic hourly chart distribution
     const hourlySalesData = [0, 0, 0, 0, 0, 0, 0];
-    const branchSalesData = [0, 0];
+    const branchSalesData = new Array(branches.length).fill(0);
 
     for (const o of todayOrders) {
       const date = new Date(o.created_at);
@@ -64,9 +68,10 @@ export const Dashboard: React.FC = () => {
       else if (hour < 20) hourlySalesData[5] += o.total;
       else hourlySalesData[6] += o.total;
 
-      if (o.branch_id === 'br_jeddah_mall') {
-        branchSalesData[1] += o.total;
-      } else {
+      const bIdx = branches.findIndex(b => b.id === o.branch_id);
+      if (bIdx > -1) {
+        branchSalesData[bIdx] += o.total;
+      } else if (branchSalesData.length > 0) {
         branchSalesData[0] += o.total;
       }
     }
@@ -138,7 +143,7 @@ export const Dashboard: React.FC = () => {
     datasets: [
       {
         fill: true,
-        label: isRtl ? 'مبيعات اليوم (ريال)' : 'Today Sales (SAR)',
+        label: isRtl ? `مبيعات اليوم (${currency})` : `Today Sales (${currency})`,
         data: hourlySales,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -148,12 +153,12 @@ export const Dashboard: React.FC = () => {
   };
 
   const barData = {
-    labels: isRtl ? ['فرع الرياض', 'فرع جدة'] : ['Riyadh Branch', 'Jeddah Branch'],
+    labels: branches.map(b => isRtl ? b.name_ar : b.name_en),
     datasets: [
       {
-        label: isRtl ? 'المبيعات الكلية' : 'Total Revenue',
+        label: t('total_revenue'),
         data: branchSales,
-        backgroundColor: ['#3b82f6', '#10b981'],
+        backgroundColor: ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899'],
         borderRadius: 8
       }
     ]
@@ -188,12 +193,10 @@ export const Dashboard: React.FC = () => {
           <img src="./logo.png" alt="Logo" className="h-16 w-16 object-contain" />
           <div>
             <h2 className="text-xl md:text-2xl font-bold font-sans">
-              {isRtl ? 'لوحة التحكم والمؤشرات' : 'Performance Dashboard'}
+              {t('performance_dashboard')}
             </h2>
             <p className="text-xs text-slate-500">
-              {isRtl 
-                ? 'مرحباً بك مجدداً. إليك نظرة سريعة على أداء الفروع اليوم.' 
-                : 'Welcome back. Here is a quick look at branch performance today.'}
+              {t('welcome_back_here_is_a_quick_look_at_branch_performance_today')}
             </p>
           </div>
         </div>
@@ -202,7 +205,7 @@ export const Dashboard: React.FC = () => {
           className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-1.5 text-xs font-semibold"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          {isRtl ? 'تحديث البيانات' : 'Refresh'}
+          {t('refresh')}
         </button>
       </div>
 
@@ -211,9 +214,9 @@ export const Dashboard: React.FC = () => {
         {/* Sales */}
         <div className="glass-card p-5 rounded-2xl flex items-center justify-between neon-glow-blue">
           <div className="space-y-1">
-            <span className="text-xs text-slate-400 font-semibold">{isRtl ? 'مبيعات اليوم' : 'Sales Today'}</span>
-            <h3 className="text-2xl font-bold font-sans">{stats.salesToday.toFixed(2)} <span className="text-xs font-normal">SAR</span></h3>
-            <span className="text-[10px] text-emerald-500 font-bold">▲ +12.4% {isRtl ? 'عن أمس' : 'from yesterday'}</span>
+            <span className="text-xs text-slate-400 font-semibold">{t('sales_today')}</span>
+            <h3 className="text-2xl font-bold font-sans">{stats.salesToday.toFixed(2)} <span className="text-xs font-normal">{currency}</span></h3>
+            <span className="text-[10px] text-emerald-500 font-bold">▲ +12.4% {t('from_yesterday')}</span>
           </div>
           <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
             <DollarSign className="h-6 w-6" />
@@ -223,9 +226,9 @@ export const Dashboard: React.FC = () => {
         {/* Orders */}
         <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-xs text-slate-400 font-semibold">{isRtl ? 'عمليات البيع اليوم' : 'Sales Transactions'}</span>
-            <h3 className="text-2xl font-bold font-sans">{stats.ordersCount} {isRtl ? 'عملية' : 'orders'}</h3>
-            <span className="text-[10px] text-emerald-500 font-bold">▲ +4.2% {isRtl ? 'معدل سحب' : 'throughput'}</span>
+            <span className="text-xs text-slate-400 font-semibold">{t('sales_transactions')}</span>
+            <h3 className="text-2xl font-bold font-sans">{stats.ordersCount} {t('orders')}</h3>
+            <span className="text-[10px] text-emerald-500 font-bold">▲ +4.2% {t('throughput')}</span>
           </div>
           <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl">
             <ShoppingBag className="h-6 w-6" />
@@ -235,9 +238,9 @@ export const Dashboard: React.FC = () => {
         {/* Customers */}
         <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-xs text-slate-400 font-semibold">{isRtl ? 'العملاء المسجلين' : 'Total Customers'}</span>
+            <span className="text-xs text-slate-400 font-semibold">{t('total_customers')}</span>
             <h3 className="text-2xl font-bold font-sans">{stats.customersCount}</h3>
-            <span className="text-[10px] text-blue-500 font-bold">{isRtl ? 'موزعين على الفئات' : 'across tiers'}</span>
+            <span className="text-[10px] text-blue-500 font-bold">{t('across_tiers')}</span>
           </div>
           <div className="p-3 bg-teal-500/10 text-teal-500 rounded-xl">
             <Users className="h-6 w-6" />
@@ -247,9 +250,9 @@ export const Dashboard: React.FC = () => {
         {/* Low Stock Warnings */}
         <div className="glass-card p-5 rounded-2xl flex items-center justify-between neon-glow-green">
           <div className="space-y-1">
-            <span className="text-xs text-slate-400 font-semibold">{isRtl ? 'تنبيهات المخزون والتواريخ' : 'Critical Stock Alerts'}</span>
+            <span className="text-xs text-slate-400 font-semibold">{t('critical_stock_alerts')}</span>
             <h3 className="text-2xl font-bold font-sans text-amber-500 dark:text-amber-400">{stats.lowStockCount}</h3>
-            <span className="text-[10px] text-amber-500 font-bold">{isRtl ? 'تطلب انتباهاً عاجلاً' : 'needs attention'}</span>
+            <span className="text-[10px] text-amber-500 font-bold">{t('needs_attention')}</span>
           </div>
           <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
             <AlertTriangle className="h-6 w-6" />
@@ -263,7 +266,7 @@ export const Dashboard: React.FC = () => {
         <div className="glass-card p-5 rounded-2xl lg:col-span-2 space-y-4">
           <div className="flex items-center gap-1.5">
             <TrendingUp className="h-5 w-5 text-blue-500" />
-            <h4 className="font-bold text-sm">{isRtl ? 'حركة المبيعات خلال ساعات اليوم' : 'Intraday Sales Flow'}</h4>
+            <h4 className="font-bold text-sm">{t('intraday_sales_flow')}</h4>
           </div>
           <div className="h-64">
             <Line data={lineData} options={chartOptions} />
@@ -274,7 +277,7 @@ export const Dashboard: React.FC = () => {
         <div className="glass-card p-5 rounded-2xl space-y-4">
           <div className="flex items-center gap-1.5">
             <Landmark className="h-5 w-5 text-emerald-500" />
-            <h4 className="font-bold text-sm">{isRtl ? 'مقارنة إيرادات الفروع' : 'Branch Revenue Compare'}</h4>
+            <h4 className="font-bold text-sm">{t('branch_revenue_compare')}</h4>
           </div>
           <div className="h-64">
             <Bar data={barData} options={chartOptions} />
@@ -287,7 +290,7 @@ export const Dashboard: React.FC = () => {
         <div className="glass-card p-5 rounded-2xl border border-red-500/10 bg-red-500/5 space-y-3">
           <h4 className="font-bold text-sm text-red-500 flex items-center gap-2">
             <AlertTriangle className="h-4.5 w-4.5" />
-            {isRtl ? 'التحذيرات النشطة في المستودع' : 'Active Stock & Expiry Violations'}
+            {t('active_stock_expiry_violations')}
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {criticalItems.map((item: any, idx: number) => (

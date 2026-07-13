@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { RefreshCw, CheckCircle, Info } from 'lucide-react';
 import { AuditLogger } from '../../utils/auditLogger';
 
 export const UpdatesCenter: React.FC = () => {
+  const { t } = useTranslation();
   const [checking, setChecking] = useState(false);
   const [lastCheck, setLastCheck] = useState(() => localStorage.getItem('pos_update_last_check') || '2026-07-09');
   const [autoUpdate, setAutoUpdate] = useState(() => localStorage.getItem('pos_auto_updates') === 'true');
@@ -67,13 +69,13 @@ export const UpdatesCenter: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 text-right" dir={t('ltr')}>
       {/* Current Status */}
       <div className="glass-card p-6 rounded-3xl border border-slate-200/40 dark:border-slate-800/40 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
         <div className="md:col-span-2 space-y-2">
           <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-200 flex items-center gap-1.5 justify-start">
             <CheckCircle className="text-emerald-500 h-5 w-5" />
-            {isRtl ? 'نظامك محدث بالكامل!' : 'System is fully up to date!'}
+            {t('system_is_fully_up_to_date')}
           </h4>
           <p className="text-xs text-slate-400">
             {isRtl 
@@ -81,9 +83,9 @@ export const UpdatesCenter: React.FC = () => {
               : `You are running the certified commercial build version. Last check: ${lastCheck}`}
           </p>
           <div className="flex gap-4 text-[11px] font-bold text-slate-500">
-            <span>{isRtl ? 'الإصدار الحالي:' : 'Active Version:'} v1.1.0</span>
-            <span>{isRtl ? 'رقم البناء:' : 'Build Number:'} 20260709.1</span>
-            <span>{isRtl ? 'بيئة التشغيل:' : 'Runtime:'} Production RC</span>
+            <span>{t('active_version')} v1.1.0</span>
+            <span>{t('build_number_1')} 20260709.1</span>
+            <span>{t('runtime')} Production RC</span>
           </div>
         </div>
 
@@ -94,11 +96,11 @@ export const UpdatesCenter: React.FC = () => {
             className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
-            {isRtl ? 'التحقق من وجود تحديثات' : 'Check for Updates'}
+            {t('check_for_updates')}
           </button>
           
           <div className="flex justify-between items-center bg-slate-500/5 px-3 py-2 rounded-xl border border-slate-200/20 text-xs font-semibold">
-            <span className="text-slate-500">{isRtl ? 'التحديث التلقائي' : 'Auto-Updates'}</span>
+            <span className="text-slate-500">{t('auto_updates')}</span>
             <input 
               type="checkbox" 
               checked={autoUpdate}
@@ -113,7 +115,7 @@ export const UpdatesCenter: React.FC = () => {
       <div className="glass-card p-5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 space-y-4">
         <h4 className="font-bold text-xs text-slate-400 border-b pb-2 flex items-center gap-1.5 justify-start">
           <Info className="h-4 w-4 text-indigo-500" />
-          {isRtl ? 'سجل التغييرات والتحديثات (Changelog)' : 'Update Changelog History'}
+          {t('update_changelog_history')}
         </h4>
 
         <div className="space-y-6 relative border-r border-slate-200/50 dark:border-slate-800/50 pr-4 mt-2" dir="rtl">

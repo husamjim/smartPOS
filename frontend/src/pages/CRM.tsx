@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, UserPlus, Gift, MessageSquare, Send, Mail } from 'lucide-react';
 import { db } from '../db/localDb';
 import type { LocalCustomer } from '../db/localDb';
+import { useApp } from '../context/AppContext';
 
 interface CommLog {
   id: string;
@@ -13,6 +14,7 @@ interface CommLog {
 
 export const CRM: React.FC = () => {
   const { t } = useTranslation();
+  const { currency } = useApp();
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCust, setSelectedCust] = useState<LocalCustomer | null>(null);
@@ -121,7 +123,7 @@ export const CRM: React.FC = () => {
       <div className="lg:col-span-2 flex flex-col space-y-4">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold font-sans">{isRtl ? 'إدارة علاقات العملاء CRM' : 'Customer Relationship (CRM)'}</h2>
+            <h2 className="text-xl font-bold font-sans">{t('customer_relationship_crm')}</h2>
             <p className="text-xs text-slate-500">تتبع مشتريات العملاء، قسائم الخصم، ونقاط الولاء.</p>
           </div>
           <button
@@ -129,7 +131,7 @@ export const CRM: React.FC = () => {
             className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
           >
             <UserPlus className="h-4 w-4" />
-            {isRtl ? 'إضافة عميل جديد' : 'New Customer'}
+            {t('new_customer')}
           </button>
         </div>
 
@@ -151,10 +153,10 @@ export const CRM: React.FC = () => {
             <table className="w-full text-sm text-right">
               <thead className="sticky top-0 bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-500 border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="p-3 py-3">{isRtl ? 'الاسم' : 'Name'}</th>
-                  <th className="p-3">{isRtl ? 'الهاتف' : 'Phone'}</th>
-                  <th className="p-3">{isRtl ? 'النقاط' : 'Loyalty Points'}</th>
-                  <th className="p-3">{isRtl ? 'الفئة' : 'Tier'}</th>
+                  <th className="p-3 py-3">{t('name')}</th>
+                  <th className="p-3">{t('phone')}</th>
+                  <th className="p-3">{t('loyalty_points')}</th>
+                  <th className="p-3">{t('tier')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,7 +168,7 @@ export const CRM: React.FC = () => {
                   >
                     <td className="p-3 py-3.5 font-semibold">{c.name}</td>
                     <td className="p-3 text-slate-500">{c.phone}</td>
-                    <td className="p-3 font-semibold text-indigo-500">{c.points} {isRtl ? 'نقطة' : 'pts'}</td>
+                    <td className="p-3 font-semibold text-indigo-500">{c.points} {t('pts')}</td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         c.tier === 'platinum' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
@@ -190,7 +192,7 @@ export const CRM: React.FC = () => {
                 disabled={customersPage === 1}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
               >
-                {isRtl ? 'السابق' : 'Previous'}
+                {t('previous')}
               </button>
               <span className="font-bold text-slate-500">
                 {isRtl ? `الصفحة ${customersPage} من ${totalCustomersPages}` : `Page ${customersPage} of ${totalCustomersPages}`}
@@ -200,7 +202,7 @@ export const CRM: React.FC = () => {
                 disabled={customersPage === totalCustomersPages}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold disabled:opacity-40"
               >
-                {isRtl ? 'التالي' : 'Next'}
+                {t('next')}
               </button>
             </div>
           )}
@@ -226,7 +228,7 @@ export const CRM: React.FC = () => {
               {/* Loyalty Tier Gauge */}
               <div className="p-4 rounded-xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/40 dark:border-slate-700/40 space-y-2">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-semibold text-slate-500">{isRtl ? 'درجة ولاء العميل' : 'Loyalty Status'}</span>
+                  <span className="font-semibold text-slate-500">{t('loyalty_status')}</span>
                   <span className="font-bold text-amber-500 flex items-center gap-1">
                     <Gift className="h-3.5 w-3.5" />
                     {selectedCust.tier.toUpperCase()}
@@ -239,17 +241,17 @@ export const CRM: React.FC = () => {
                   />
                 </div>
                 <div className="flex justify-between text-[9px] text-slate-400">
-                  <span>{selectedCust.points} {isRtl ? 'نقطة حالية' : 'pts'}</span>
-                  <span>{isRtl ? 'المستوى القادم: 400 نقطة' : 'Next: 400 pts'}</span>
+                  <span>{selectedCust.points} {t('pts')}</span>
+                  <span>{t('next_400_pts')}</span>
                 </div>
               </div>
 
               {/* Purchase History list */}
               <div className="space-y-2 pt-2 border-t border-slate-200/40 dark:border-slate-700/40">
-                <span className="text-[10px] font-bold text-slate-500 block">🛍️ {isRtl ? 'سجل مشتريات العميل:' : 'Order Purchase History:'}</span>
+                <span className="text-[10px] font-bold text-slate-500 block">🛍️ {t('order_purchase_history')}</span>
                 {purchaseHistory.length === 0 ? (
                   <div className="text-[10px] text-slate-400 text-center py-2 bg-slate-100/30 dark:bg-slate-800/20 rounded-lg">
-                    {isRtl ? 'لا توجد مبيعات سابقة مسجلة' : 'No purchase records found'}
+                    {t('no_purchase_records_found')}
                   </div>
                 ) : (
                   <div className="space-y-1 max-h-[90px] overflow-y-auto pr-1">
@@ -257,7 +259,7 @@ export const CRM: React.FC = () => {
                       <div key={ord.id} className="flex justify-between text-[10px] p-1.5 bg-slate-100/30 dark:bg-slate-800/20 border rounded-lg">
                         <span className="font-bold">{ord.invoice_number}</span>
                         <span className="text-slate-400 font-sans">{new Date(ord.created_at).toLocaleDateString()}</span>
-                        <span className="font-bold text-blue-500 font-sans">{ord.total.toFixed(2)} SAR</span>
+                        <span className="font-bold text-blue-500 font-sans">{ord.total.toFixed(2)} {currency}</span>
                       </div>
                     ))}
                   </div>
@@ -266,7 +268,7 @@ export const CRM: React.FC = () => {
 
               {selectedCust.notes && (
                 <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10">
-                  <b>{isRtl ? 'ملاحظة:' : 'Note:'}</b> {selectedCust.notes}
+                  <b>{t('note')}</b> {selectedCust.notes}
                 </div>
               )}
             </div>
@@ -275,7 +277,7 @@ export const CRM: React.FC = () => {
             <div className="glass-card p-5 rounded-2xl shadow-sm flex-1 flex flex-col space-y-3">
               <h4 className="font-bold text-sm flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-blue-500" />
-                {isRtl ? 'إرسال حملة ترويجية أو تنبيه' : 'Send Alert / Promo'}
+                {t('send_alert_promo')}
               </h4>
 
               <form onSubmit={handleSendCommunication} className="space-y-3">
@@ -309,15 +311,15 @@ export const CRM: React.FC = () => {
                   className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex justify-center items-center gap-1 transition-all"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  {isRtl ? 'إرسال الآن' : 'Send Message'}
+                  {t('send_message')}
                 </button>
               </form>
 
               {/* Logs */}
               <div className="flex-1 overflow-y-auto space-y-2 max-h-[140px] pt-2 border-t border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-semibold text-slate-400 block">{isRtl ? 'سجل الاتصالات السابق:' : 'Communication Log:'}</span>
+                <span className="text-[10px] font-semibold text-slate-400 block">{t('communication_log')}</span>
                 {(commLogs[selectedCust.id] || []).length === 0 ? (
-                  <div className="text-[10px] text-slate-400 text-center py-4">{isRtl ? 'لا توجد مراسلات سابقة' : 'No previous communications'}</div>
+                  <div className="text-[10px] text-slate-400 text-center py-4">{t('no_previous_communications')}</div>
                 ) : (
                   commLogs[selectedCust.id].map(log => (
                     <div key={log.id} className="p-2 rounded bg-slate-100/50 dark:bg-slate-800/30 text-[10px] border border-slate-200/30">
@@ -334,7 +336,7 @@ export const CRM: React.FC = () => {
           </>
         ) : (
           <div className="glass-card p-8 rounded-2xl text-center text-slate-400">
-            {isRtl ? 'اختر عميلاً لعرض التفاصيل' : 'Select a customer to view logs'}
+            {t('select_a_customer_to_view_logs')}
           </div>
         )}
       </div>
@@ -344,7 +346,7 @@ export const CRM: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <form onSubmit={handleAddCustomer} className="glass-card p-6 rounded-2xl max-w-md w-full space-y-4 animate-fade-in text-right">
             <h3 className="font-bold text-base border-b border-slate-200 dark:border-slate-800 pb-2">
-              {isRtl ? 'إضافة عميل جديد إلى قاعدة البيانات' : 'Register New CRM Client'}
+              {t('register_new_crm_client')}
             </h3>
 
             <div className="space-y-3">
